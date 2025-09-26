@@ -24,7 +24,8 @@
             height: 100vh;
         }
 
-        .buttons-tl, #param-form {
+        .buttons-tl,
+        #param-form {
             position: absolute;
             left: 20px;
             z-index: 1;
@@ -56,8 +57,12 @@
             border-radius: 4px;
         }
 
-        button, #param-form, .maplibregl-ctrl {
-            color: white; backdrop-filter: blur(24px); background: rgba(20, 20, 25, 0.4);
+        button,
+        #param-form,
+        .maplibregl-ctrl {
+            color: white;
+            backdrop-filter: blur(24px);
+            background: rgba(20, 20, 25, 0.4);
         }
 
         .mapboxgl-ctrl-top-right .mapboxgl-ctrl,
@@ -71,7 +76,7 @@
             border-top: 0px;
             color: #fff !important;
         }
-        
+
         button.mapboxgl-ctrl-zoom-in span.maplibregl-ctrl-icon {
             background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23fff'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5z'/%3E%3C/svg%3E") !important;
         }
@@ -192,11 +197,11 @@
             border-radius: 50%;
         }
 
-        input:checked + .slider {
+        input:checked+.slider {
             background-color: rgba(255, 255, 255, 0.8);
         }
 
-        input:checked + .slider:before {
+        input:checked+.slider:before {
             transform: translateX(26px);
         }
 
@@ -216,18 +221,17 @@
         p {
             margin-block: 4px;
         }
-        
+
         .maplibregl-ctrl-group button {
             width: 36px !important;
             height: 36px !important;
         }
-
     </style>
 </head>
 
 <body>
     <div class="buttons-tl">
-            <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+        <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
     </div>
 
     <div id="param-form">
@@ -257,7 +261,8 @@
                 </div>
                 <div class="form-section">
                     <div class="switch-container">
-                        <span class="switch-label"><i class="fas fa-users-viewfinder"></i> Gewichtet nach Bevölkerung</span>
+                        <span class="switch-label"><i class="fas fa-users-viewfinder"></i> Gewichtet nach
+                            Bevölkerung</span>
                         <label class="switch">
                             <input type="checkbox" id="weightedSwitch">
                             <span class="slider"></span>
@@ -270,249 +275,249 @@
     </div>
 
     <script>
-    // Set active tabs immediately to prevent flicker
-    (function() {
-        const params = new URLSearchParams(window.location.search);
-        
-        // Map mode to values and prognosis tabs
-        function mapModeToTabs(mode) {
-            const values = {
-                'nowNom': 'nowNom',
-                'nowMinMax': 'nowMinMax',
-                'progNom10': 'nowNom', // Prognosis forces Average
-                'progNom20': 'nowNom'  // Prognosis forces Average
-            };
-            
-            const prognosis = {
-                'nowNom': 'off',
-                'nowMinMax': 'off',
-                'progNom10': 'progNom10',
-                'progNom20': 'progNom20'
-            };
-            
-            return {
-                values: values[mode] || 'nowNom',
-                prognosis: prognosis[mode] || 'off'
-            };
-        }
-        
-        // Set active state as soon as possible
-        function setActiveTabs() {
-            const currentData = params.get('data') || 'h'; // default to 'h'
-            const currentMode = params.get('mode') || 'nowNom'; // default to 'nowNom'
-            const currentWeighted = params.get('weighted') === 'true'; // default to false
-            const tabMapping = mapModeToTabs(currentMode);
-            
-            // Set data tab active
-            const dataTab = document.querySelector(`.tab-bar[data-group="data"] .tab-button[data-value="${currentData}"]`);
-            if (dataTab) {
-                document.querySelectorAll('.tab-bar[data-group="data"] .tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                dataTab.classList.add('active');
+        // Set active tabs immediately to prevent flicker
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+
+            // Map mode to values and prognosis tabs
+            function mapModeToTabs(mode) {
+                const values = {
+                    'nowNom': 'nowNom',
+                    'nowMinMax': 'nowMinMax',
+                    'progNom10': 'nowNom', // Prognosis forces Average
+                    'progNom20': 'nowNom'  // Prognosis forces Average
+                };
+
+                const prognosis = {
+                    'nowNom': 'off',
+                    'nowMinMax': 'off',
+                    'progNom10': 'progNom10',
+                    'progNom20': 'progNom20'
+                };
+
+                return {
+                    values: values[mode] || 'nowNom',
+                    prognosis: prognosis[mode] || 'off'
+                };
             }
-            
-            // Set weighted switch
+
+            // Set active state as soon as possible
+            function setActiveTabs() {
+                const currentData = params.get('data') || 'h'; // default to 'h'
+                const currentMode = params.get('mode') || 'nowNom'; // default to 'nowNom'
+                const currentWeighted = params.get('weighted') === 'true'; // default to false
+                const tabMapping = mapModeToTabs(currentMode);
+
+                // Set data tab active
+                const dataTab = document.querySelector(`.tab-bar[data-group="data"] .tab-button[data-value="${currentData}"]`);
+                if (dataTab) {
+                    document.querySelectorAll('.tab-bar[data-group="data"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    dataTab.classList.add('active');
+                }
+
+                // Set weighted switch
+                const weightedSwitch = document.getElementById('weightedSwitch');
+                if (weightedSwitch) {
+                    weightedSwitch.checked = currentWeighted;
+                    if (typeof updateWeightedCaption === 'function') {
+                        updateWeightedCaption(currentWeighted);
+                    }
+                }
+
+                // Set values tab active
+                const valuesTab = document.querySelector(`.tab-bar[data-group="values"] .tab-button[data-value="${tabMapping.values}"]`);
+                if (valuesTab) {
+                    document.querySelectorAll('.tab-bar[data-group="values"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    valuesTab.classList.add('active');
+                }
+
+                // Set prognosis tab active
+                const prognosisTab = document.querySelector(`.tab-bar[data-group="prognosis"] .tab-button[data-value="${tabMapping.prognosis}"]`);
+                if (prognosisTab) {
+                    document.querySelectorAll('.tab-bar[data-group="prognosis"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    prognosisTab.classList.add('active');
+                }
+            }
+
+
+            // Try to set immediately if DOM is ready, otherwise wait
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', setActiveTabs);
+            } else {
+                setActiveTabs();
+            }
+        })();
+
+        // JavaScript for tab bar interactions
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle weighted switch
             const weightedSwitch = document.getElementById('weightedSwitch');
             if (weightedSwitch) {
-                weightedSwitch.checked = currentWeighted;
-                if (typeof updateWeightedCaption === 'function') {
-                    updateWeightedCaption(currentWeighted);
-                }
-            }
-            
-            // Set values tab active
-            const valuesTab = document.querySelector(`.tab-bar[data-group="values"] .tab-button[data-value="${tabMapping.values}"]`);
-            if (valuesTab) {
-                document.querySelectorAll('.tab-bar[data-group="values"] .tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                valuesTab.classList.add('active');
-            }
-            
-            // Set prognosis tab active
-            const prognosisTab = document.querySelector(`.tab-bar[data-group="prognosis"] .tab-button[data-value="${tabMapping.prognosis}"]`);
-            if (prognosisTab) {
-                document.querySelectorAll('.tab-bar[data-group="prognosis"] .tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                prognosisTab.classList.add('active');
-            }
-        }
-        
-        
-        // Try to set immediately if DOM is ready, otherwise wait
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setActiveTabs);
-        } else {
-            setActiveTabs();
-        }
-    })();
+                weightedSwitch.addEventListener('change', function () {
+                    updateWeightedCaption(this.checked);
 
-    // JavaScript for tab bar interactions
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle weighted switch
-        const weightedSwitch = document.getElementById('weightedSwitch');
-        if (weightedSwitch) {
-            weightedSwitch.addEventListener('change', function() {
-                updateWeightedCaption(this.checked);
-                
-                // Update URL without reload
-                const url = new URL(window.location.href);
-                url.searchParams.set('weighted', this.checked.toString());
-                window.history.replaceState({}, '', url.toString());
-                
-                // Update map data
-                updateMapData();
-            });
-        }
-        
-        // Handle tab button clicks
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', function() {
-                const group = this.closest('.tab-bar').dataset.group;
-                const value = this.dataset.value;
-                
-                // Remove active class from all buttons in the same group
-                this.closest('.tab-bar').querySelectorAll('.tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                
-                // Add active class to clicked button
-                this.classList.add('active');
-                
-                // Handle constraints and force-switches
-                if (group === 'prognosis') {
-                    if (value === 'progNom10' || value === 'progNom20') {
-                        // Prognosis active: force values to "Average"
-                        forceValuesToAverage();
-                    }
-                } else if (group === 'values') {
-                    if (value === 'nowMinMax') {
-                        // Min/Max selected: force prognosis to "Off"
-                        forcePrognosisOff();
-                    }
-                }
-                
-                // Update URL without reload
-                const url = new URL(window.location.href);
-                
-                if (group === 'data') {
-                    // Direct mapping for data
-                    url.searchParams.set('data', value);
+                    // Update URL without reload
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('weighted', this.checked.toString());
                     window.history.replaceState({}, '', url.toString());
-                    
-                    // Animate camera to new location
-                    animateToLocation(value);
-                } else if (group === 'values' || group === 'prognosis') {
-                    // Get final combined mode
-                    const mode = getCombinedMode();
-                    url.searchParams.set('mode', mode);
-                    window.history.replaceState({}, '', url.toString());
-                    
+
                     // Update map data
                     updateMapData();
+                });
+            }
+
+            // Handle tab button clicks
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function () {
+                    const group = this.closest('.tab-bar').dataset.group;
+                    const value = this.dataset.value;
+
+                    // Remove active class from all buttons in the same group
+                    this.closest('.tab-bar').querySelectorAll('.tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    // Add active class to clicked button
+                    this.classList.add('active');
+
+                    // Handle constraints and force-switches
+                    if (group === 'prognosis') {
+                        if (value === 'progNom10' || value === 'progNom20') {
+                            // Prognosis active: force values to "Average"
+                            forceValuesToAverage();
+                        }
+                    } else if (group === 'values') {
+                        if (value === 'nowMinMax') {
+                            // Min/Max selected: force prognosis to "Off"
+                            forcePrognosisOff();
+                        }
+                    }
+
+                    // Update URL without reload
+                    const url = new URL(window.location.href);
+
+                    if (group === 'data') {
+                        // Direct mapping for data
+                        url.searchParams.set('data', value);
+                        window.history.replaceState({}, '', url.toString());
+
+                        // Animate camera to new location
+                        animateToLocation(value);
+                    } else if (group === 'values' || group === 'prognosis') {
+                        // Get final combined mode
+                        const mode = getCombinedMode();
+                        url.searchParams.set('mode', mode);
+                        window.history.replaceState({}, '', url.toString());
+
+                        // Update map data
+                        updateMapData();
+                    }
+                });
+            });
+
+            // Helper functions
+            function forceValuesToAverage() {
+                const averageTab = document.querySelector('.tab-bar[data-group="values"] .tab-button[data-value="nowNom"]');
+                if (averageTab) {
+                    document.querySelectorAll('.tab-bar[data-group="values"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    averageTab.classList.add('active');
                 }
-            });
+            }
+
+            function forcePrognosisOff() {
+                const offTab = document.querySelector('.tab-bar[data-group="prognosis"] .tab-button[data-value="off"]');
+                if (offTab) {
+                    document.querySelectorAll('.tab-bar[data-group="prognosis"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    offTab.classList.add('active');
+                }
+            }
+
+            function getCombinedMode() {
+                const currentValues = getCurrentValues();
+                const currentPrognosis = getCurrentPrognosis();
+
+                // Apply constraints
+                if (currentPrognosis === 'progNom10' || currentPrognosis === 'progNom20') {
+                    return currentPrognosis; // Prognosis overrides values
+                } else if (currentValues === 'nowMinMax') {
+                    return 'nowMinMax'; // Min/Max forces prognosis off
+                } else {
+                    return currentValues; // Default to values
+                }
+            }
+
+            function getCurrentValues() {
+                const activeValuesTab = document.querySelector('.tab-bar[data-group="values"] .tab-button.active');
+                return activeValuesTab ? activeValuesTab.dataset.value : 'nowNom';
+            }
+
+            function getCurrentPrognosis() {
+                const activePrognosisTab = document.querySelector('.tab-bar[data-group="prognosis"] .tab-button.active');
+                return activePrognosisTab ? activePrognosisTab.dataset.value : 'off';
+            }
+
+            // Function to animate camera to new location
+            function animateToLocation(dataValue) {
+                const center = dataValue === 'h' ? [10, 53.54] : [11.15, 53.05];
+                map.flyTo({
+                    center: center,
+                    zoom: 10,
+                    duration: 1500,
+                    essential: true
+                });
+
+                // Update map data after camera animation
+                setTimeout(() => {
+                    updateMapData();
+                }, 1600);
+            }
+
+            // Function to update map data without reload
+            function updateMapData() {
+                // Get current parameters
+                const currentData = getCurrentData();
+                const currentMode = getCombinedMode();
+                const currentWeighted = document.getElementById('weightedSwitch').checked;
+
+                // Update global variables
+                window.dataParam = currentData;
+                window.mode = currentMode;
+                window.weighted = currentWeighted;
+                window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
+
+                // Update data path
+                const dataPath = window.dataParam == 'h' ?
+                    'data/20250924-hamburg/hausaerzteErwachsene.geojson' :
+                    'data/20250919-luechow/hausaerzteErwachsene.geojson';
+
+                // Load and process new data
+                fetch(dataPath)
+                    .then(res => res.json())
+                    .then(geojson => {
+                        processAndUpdateMapData(geojson);
+                    })
+                    .catch(error => {
+                        console.error('Error loading data:', error);
+                    });
+            }
+
+            function getCurrentData() {
+                const activeDataTab = document.querySelector('.tab-bar[data-group="data"] .tab-button.active');
+                return activeDataTab ? activeDataTab.dataset.value : 'h';
+            }
+
         });
-        
-        // Helper functions
-        function forceValuesToAverage() {
-            const averageTab = document.querySelector('.tab-bar[data-group="values"] .tab-button[data-value="nowNom"]');
-            if (averageTab) {
-                document.querySelectorAll('.tab-bar[data-group="values"] .tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                averageTab.classList.add('active');
-            }
-        }
-        
-        function forcePrognosisOff() {
-            const offTab = document.querySelector('.tab-bar[data-group="prognosis"] .tab-button[data-value="off"]');
-            if (offTab) {
-                document.querySelectorAll('.tab-bar[data-group="prognosis"] .tab-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                offTab.classList.add('active');
-            }
-        }
-        
-        function getCombinedMode() {
-            const currentValues = getCurrentValues();
-            const currentPrognosis = getCurrentPrognosis();
-            
-            // Apply constraints
-            if (currentPrognosis === 'progNom10' || currentPrognosis === 'progNom20') {
-                return currentPrognosis; // Prognosis overrides values
-            } else if (currentValues === 'nowMinMax') {
-                return 'nowMinMax'; // Min/Max forces prognosis off
-            } else {
-                return currentValues; // Default to values
-            }
-        }
-        
-        function getCurrentValues() {
-            const activeValuesTab = document.querySelector('.tab-bar[data-group="values"] .tab-button.active');
-            return activeValuesTab ? activeValuesTab.dataset.value : 'nowNom';
-        }
-        
-        function getCurrentPrognosis() {
-            const activePrognosisTab = document.querySelector('.tab-bar[data-group="prognosis"] .tab-button.active');
-            return activePrognosisTab ? activePrognosisTab.dataset.value : 'off';
-        }
-        
-        // Function to animate camera to new location
-        function animateToLocation(dataValue) {
-            const center = dataValue === 'h' ? [10, 53.54] : [11.15, 53.05];
-            map.flyTo({
-                center: center,
-                zoom: 10,
-                duration: 1500,
-                essential: true
-            });
-            
-            // Update map data after camera animation
-            setTimeout(() => {
-                updateMapData();
-            }, 1600);
-        }
-        
-        // Function to update map data without reload
-        function updateMapData() {
-            // Get current parameters
-            const currentData = getCurrentData();
-            const currentMode = getCombinedMode();
-            const currentWeighted = document.getElementById('weightedSwitch').checked;
-            
-            // Update global variables
-            window.dataParam = currentData;
-            window.mode = currentMode;
-            window.weighted = currentWeighted;
-            window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
-            
-            // Update data path
-            const newDataPath = window.dataParam == 'h' ?
-                'data/20250919/hamburg/alle_20250725.geojson' :
-                'data/20250919/luechow/hausaerzteErwachsene.geojson';
-            
-            // Load and process new data
-            fetch(newDataPath)
-                .then(res => res.json())
-                .then(geojson => {
-                    processAndUpdateMapData(geojson);
-                })
-                .catch(error => {
-                    console.error('Error loading data:', error);
-                });
-        }
-        
-        function getCurrentData() {
-            const activeDataTab = document.querySelector('.tab-bar[data-group="data"] .tab-button.active');
-            return activeDataTab ? activeDataTab.dataset.value : 'h';
-        }
-        
-    });
-</script>
+    </script>
 
     <div id="map"></div>
 
@@ -538,10 +543,8 @@
         }
 
         const dataPath = window.dataParam == 'h' ?
-            // 'data/20250725/20250723-1059_osm_hamburg_weightingCautious_drive__filtered_with_abspop.geojson' :
-            // 'data/20250725/20250723-1029_osm_luechow_weightingCautious_drive__filtered_with_abspop.geojson';
-            'data/20250919/hamburg/alle_20250725.geojson' :
-            'data/20250919/luechow/hausaerzteErwachsene.geojson';
+            'data/20250924-hamburg/hausaerzteErwachsene.geojson' :
+            'data/20250919-luechow/hausaerzteErwachsene.geojson';
 
         const binCount = parseInt(searchParams.get('bins')) || 4;
 
@@ -554,7 +557,7 @@
         const center = window.dataParam === 'h' ? [10, 53.54] : [11.15, 53.05];
         const radiusInMeters = 50;
         const earthRadius = 6371000;
-        
+
         // let extrusionFactor = 1;
         // if (mode === 'nowNom' || mode === 'nowMinMax')
         const extrusionFactor = window.weighted ? 8000 : 3200;
@@ -593,7 +596,7 @@
 
             allVals.sort((a, b) => a - b);
             console.log('Max value:', allVals[allVals.length - 1]);
-            
+
             const quantiles = (arr, bins = binCount) => {
                 const result = [];
                 for (let i = 1; i < bins; i++) {
@@ -601,21 +604,21 @@
                 }
                 return result;
             };
-            
+
             const combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
             console.log('Quantiles:', combinedQuantiles);
 
             const ef = extrusionFactor / allVals[allVals.length - 1];
-            
+
             const extrusions = [];
             geojson.features.forEach((f, i) => {
                 const center = f.geometry.coordinates;
                 const t = properties(f.properties, window.mode, window.weighted);
-     
+
                 // Always add the outer ring (base)
                 extrusions.push({
                     type: 'Feature',
-                    id: i*2,
+                    id: i * 2,
                     geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 1)] },
                     properties: {
                         color: interpolateColor(t[0], combinedQuantiles),
@@ -623,16 +626,16 @@
                         targetHeight: Math.abs(t[0]) * ef
                     }
                 });
-                
+
                 // Add inner ring for all modes, but with zero height except for nowMinMax (always visible in 2D, extruded in 3D)
                 extrusions.push({
                     type: 'Feature',
-                    id: i*2+1,
+                    id: i * 2 + 1,
                     geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 0.5)] },
                     properties: {
                         color: interpolateColor(window.mode === 'nowMinMax' ? t[1] : t[0], combinedQuantiles),
                         baseHeight: 0,
-                        targetHeight: window.mode === 'nowMinMax' ? t[1] * ef : 0
+                        targetHeight: window.mode === 'nowMinMax' ? Math.abs(t[1]) * ef : 0
                     }
                 });
             });
@@ -650,7 +653,7 @@
                 map.addLayer({
                     id: 'extruded-layer',
                     type: 'fill-extrusion',
-                        source: 'cells',
+                    source: 'cells',
                     paint: {
                         'fill-extrusion-color': ['get', 'color'],
                         // 'fill-extrusion-opacity': ['get', 'opacity'],
@@ -667,15 +670,45 @@
                 });
             }
             else {
+                // Store current heights before updating data
+                const currentHeights = new Map();
+                if (map.getSource('cells')) {
+                    const source = map.getSource('cells');
+                    const features = source._data.features;
+                    features.forEach(f => {
+                        const state = map.getFeatureState({ source: 'cells', id: f.id });
+                        currentHeights.set(f.id, state.height || 0);
+                    });
+                }
+
                 // Update map source
                 map.getSource('cells').setData({ type: 'FeatureCollection', features: extrusions });
+
+                // Check if we're switching between compatible modes
+                const isCompatibleModeSwitch = window.lastMode && (
+                    (window.lastMode === 'progNom10' && window.mode === 'progNom20') ||
+                    (window.lastMode === 'progNom20' && window.mode === 'progNom10') ||
+                    (window.lastMode === 'nowNom' && window.mode === 'nowMinMax') ||
+                    (window.lastMode === 'nowMinMax' && window.mode === 'nowNom')
+                );
+
+                if (isCompatibleModeSwitch) {
+                    // Preserve heights for compatible mode switches
+                    extrusions.forEach(f => {
+                        const preservedHeight = currentHeights.get(f.id) || 0;
+                        map.setFeatureState({ source: 'cells', id: f.id }, { height: preservedHeight });
+                    });
+                } else {
+                    // Reset feature states for other changes
+                    extrusions.forEach(f =>
+                        map.setFeatureState({ source: 'cells', id: f.id }, { height: 0 })
+                    );
+                }
             }
-            
-            // Reset feature states and animate to target heights
-            extrusions.forEach(f =>
-                map.setFeatureState({ source: 'cells', id: f.id }, { height: 0 })
-            );
-            
+
+            // Store current mode for next comparison
+            window.lastMode = window.mode;
+
             // Animate extrusions to target heights if in 3D mode
             if (mapState === MapState.in3D) {
                 setTimeout(() => {
@@ -700,10 +733,10 @@
                 colorMin = [50, 165, 202];
                 colorMax = [218, 85, 80];
             }
-          
+
             for (let i = 0; i < thresholds.length; i++) {
                 if (value <= thresholds[i]) {
-                    const t = i/thresholds.length;
+                    const t = i / thresholds.length;
                     const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
                     const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
                     const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
@@ -715,11 +748,11 @@
 
         const makeHexPolygon = ([centerLon, centerLat], scale = 1) => {
             const points = [];
-            const verticesCount =  window.prognosis ? verticesCountPrognosis : verticesCountNow;
+            const verticesCount = window.prognosis ? verticesCountPrognosis : verticesCountNow;
             for (let i = 0.5; i < verticesCount; i++) {
                 const angle = (i / verticesCount) * 2 * Math.PI;
                 const dLat = latRadiusInDegrees * scale * Math.sin(angle);
-                const dLon = lonRadiusInDegrees * scale * Math.cos(angle);  
+                const dLon = lonRadiusInDegrees * scale * Math.cos(angle);
                 points.push([centerLon + dLon, centerLat + dLat]);
             }
             points.push(points[0]);
@@ -729,21 +762,21 @@
         const properties = (prop, mode, weighted = false) => {
             switch (mode) {
                 case 'nowNom':
-                    return weighted ? 
-                        [prop.EwM_22_Nom_100pctDocs] : 
+                    return weighted ?
+                        [prop.EwM_22_Nom_100pctDocs] :
                         [prop.tNom_100pctDocs];
                 case 'nowMinMax':
-                    return weighted ? 
-                        [prop.EwM_22_Min_100pctDocs, prop.EwM_22_Max_100pctDocs] : 
+                    return weighted ?
+                        [prop.EwM_22_Min_100pctDocs, prop.EwM_22_Max_100pctDocs] :
                         [prop.tMin_100pctDocs, prop.tMax_100pctDocs];
                 case 'progNom10':
-                    return weighted ? 
-                        [prop.EwM_22_40_Nom_090pctDocs_diff] : 
+                    return weighted ?
+                        [prop.EwM_40_Nom_090pctDocs - prop.EwM_22_Nom_100pctDocs] :
                         [prop.tNom_090pctDocs - prop.tNom_100pctDocs];
                 case 'progNom20':
-                    return weighted ? 
+                    return weighted ?
                         // [prop.EwM_22_Nom_100pctDocs * (1 + prop.EwM_22_40_Nom_080pctDocs_diff/100)] : 
-                        [prop.EwM_22_40_Nom_080pctDocs_diff] :
+                        [prop.EwM_40_Nom_080pctDocs - prop.EwM_22_Nom_100pctDocs] :
                         [prop.tNom_080pctDocs - prop.tNom_100pctDocs];
                 default:
                     return [];
@@ -775,12 +808,21 @@
             const features = source._data.features;
             const start = performance.now();
 
+            // Store current heights at the start of animation
+            const startHeights = new Map();
+            features.forEach(f => {
+                const state = map.getFeatureState({ source: 'cells', id: f.id });
+                startHeights.set(f.id, state.height || 0);
+            });
+
             function frame(now) {
                 const t = Math.min((now - start) / duration, 1);
                 const eased = t * t * (3 - 2 * t);
 
                 for (const f of features) {
-                    const newHeight = eased * (to3D ? f.properties.targetHeight : 0);
+                    const startHeight = startHeights.get(f.id) || 0;
+                    const targetHeight = to3D ? f.properties.targetHeight : 0;
+                    const newHeight = startHeight + (targetHeight - startHeight) * eased;
                     map.setFeatureState({ source: 'cells', id: f.id }, { height: newHeight });
                 }
 
