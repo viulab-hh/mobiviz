@@ -222,6 +222,33 @@
             margin-block: 4px;
         }
 
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 16px;
+            border: none;
+            color: white;
+            background: rgba(40, 40, 45, 0.8);
+            cursor: pointer;
+            border-radius: 6px;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        select:focus {
+            outline: 2px solid rgba(255, 255, 255, 0.5);
+            outline-offset: 2px;
+        }
+
+        select option {
+            background: #1a1a1a;
+            color: white;
+        }
+
         .maplibregl-ctrl-group button {
             width: 36px !important;
             height: 36px !important;
@@ -243,6 +270,29 @@
                         <button type="button" class="tab-button" data-value="h">Hamburg</button>
                         <button type="button" class="tab-button" data-value="l">Lüchow</button>
                     </div>
+                </div>
+                <div class="form-section">
+                    <h3 class="form-section-title"><i class="fas fa-user-doctor"></i> Fachrichtung</h3>
+                    <select id="specialtySelect">
+                        <option value="hausaerzteErwachsene">Hausärzte (Erwachsene)</option>
+                        <option value="hausaerzteKinder">Hausärzte (Kinder)</option>
+                        <option value="anaesthesie">Anästhesie</option>
+                        <option value="augenaerzte">Augenärzte</option>
+                        <option value="chirurgie">Chirurgie</option>
+                        <option value="fachaerztlicheKindermedizin">Fachärztliche Kindermedizin</option>
+                        <option value="frauenheilkunde">Frauenheilkunde</option>
+                        <option value="hautaerzte">Hautärzte</option>
+                        <option value="hnoaerzte">HNO-Ärzte</option>
+                        <option value="innereMedizin">Innere Medizin</option>
+                        <option value="laborMedizin">Labormedizin</option>
+                        <option value="neurologiePsychiatrie">Neurologie/Psychiatrie</option>
+                        <option value="pathologie">Pathologie</option>
+                        <option value="radiologie">Radiologie</option>
+                        <option value="sonderfaecher">Sonderfächer</option>
+                        <option value="sonstige">Sonstige</option>
+                        <option value="strahlentherapieNuklearmedizin">Strahlentherapie/Nuklearmedizin</option>
+                        <option value="urologen">Urologen</option>
+                    </select>
                 </div>
                 <div class="form-section">
                     <h3 class="form-section-title"><i class="fas fa-chart-simple"></i> Erreichbarkeitswerte</h3>
@@ -306,6 +356,7 @@
                 const currentData = params.get('data') || 'h'; // default to 'h'
                 const currentMode = params.get('mode') || 'nowNom'; // default to 'nowNom'
                 const currentWeighted = params.get('weighted') === 'true'; // default to false
+                const currentSpecialty = params.get('specialty') || 'hausaerzteErwachsene'; // default specialty
                 const tabMapping = mapModeToTabs(currentMode);
 
                 // Set data tab active
@@ -315,6 +366,17 @@
                         btn.classList.remove('active');
                     });
                     dataTab.classList.add('active');
+                }
+
+                // Set specialty select
+                const specialtySelect = document.getElementById('specialtySelect');
+                if (specialtySelect) {
+                    specialtySelect.value = currentSpecialty;
+                }
+
+                // Update specialty options based on current location (must be called after DOM is ready)
+                if (typeof updateSpecialtyOptions === 'function') {
+                    updateSpecialtyOptions(currentData);
                 }
 
                 // Set weighted switch
@@ -354,8 +416,63 @@
             }
         })();
 
+        // Global function for updating specialty options
+        function updateSpecialtyOptions(location) {
+            const specialtySelect = document.getElementById('specialtySelect');
+            if (!specialtySelect) return;
+
+            // Specialties only available in Hamburg
+            const hamburgOnlySpecialties = [
+                'fachaerztlicheKindermedizin',
+                'laborMedizin',
+                'pathologie',
+                'sonderfaecher',
+                'strahlentherapieNuklearmedizin'
+            ];
+
+            const options = specialtySelect.querySelectorAll('option');
+            const currentValue = specialtySelect.value;
+            
+            options.forEach(option => {
+                const isHamburgOnly = hamburgOnlySpecialties.includes(option.value);
+                
+                if (location === 'l' && isHamburgOnly) {
+                    option.disabled = true;
+                    option.textContent = option.textContent.split(' (')[0] + ' (nur Hamburg)';
+                } else {
+                    option.disabled = false;
+                    // Remove " (nur Hamburg)" suffix if it exists
+                    option.textContent = option.textContent.replace(' (nur Hamburg)', '');
+                }
+            });
+
+            // If current selection is Hamburg-only and we switched to Lüchow, reset to default
+            if (location === 'l' && hamburgOnlySpecialties.includes(currentValue)) {
+                specialtySelect.value = 'hausaerzteErwachsene';
+                
+                // Update URL
+                const url = new URL(window.location.href);
+                url.searchParams.set('specialty', 'hausaerzteErwachsene');
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+
         // JavaScript for tab bar interactions
         document.addEventListener('DOMContentLoaded', function () {
+            // Handle specialty select
+            const specialtySelect = document.getElementById('specialtySelect');
+            if (specialtySelect) {
+                specialtySelect.addEventListener('change', function () {
+                    // Update URL without reload
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('specialty', this.value);
+                    window.history.replaceState({}, '', url.toString());
+
+                    // Update map data
+                    updateMapData();
+                });
+            }
+
             // Handle weighted switch
             const weightedSwitch = document.getElementById('weightedSwitch');
             if (weightedSwitch) {
@@ -406,6 +523,9 @@
                         // Direct mapping for data
                         url.searchParams.set('data', value);
                         window.history.replaceState({}, '', url.toString());
+
+                        // Update specialty dropdown based on location
+                        updateSpecialtyOptions(value);
 
                         // Animate camera to new location
                         animateToLocation(value);
@@ -488,17 +608,19 @@
                 const currentData = getCurrentData();
                 const currentMode = getCombinedMode();
                 const currentWeighted = document.getElementById('weightedSwitch').checked;
+                const currentSpecialty = getCurrentSpecialty();
 
                 // Update global variables
                 window.dataParam = currentData;
                 window.mode = currentMode;
                 window.weighted = currentWeighted;
+                window.specialty = currentSpecialty;
                 window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
 
                 // Update data path
                 const dataPath = window.dataParam == 'h' ?
-                    'data/20250924-hamburg/hausaerzteErwachsene.geojson' :
-                    'data/20250919-luechow/hausaerzteErwachsene.geojson';
+                    `data/20250924-hamburg/${currentSpecialty}.geojson` :
+                    `data/20250919-luechow/${currentSpecialty}.geojson`;
 
                 // Load and process new data
                 fetch(dataPath)
@@ -516,6 +638,11 @@
                 return activeDataTab ? activeDataTab.dataset.value : 'h';
             }
 
+            function getCurrentSpecialty() {
+                const specialtySelect = document.getElementById('specialtySelect');
+                return specialtySelect ? specialtySelect.value : 'hausaerzteErwachsene';
+            }
+
         });
     </script>
 
@@ -531,6 +658,7 @@
         console.log("mode: ", window.mode);
         window.dataParam = (searchParams.get('data') || 'h');
         window.weighted = (searchParams.get('weighted') === 'true');
+        window.specialty = (searchParams.get('specialty') || 'hausaerzteErwachsene');
 
         window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
 
@@ -543,8 +671,8 @@
         }
 
         const dataPath = window.dataParam == 'h' ?
-            'data/20250924-hamburg/hausaerzteErwachsene.geojson' :
-            'data/20250919-luechow/hausaerzteErwachsene.geojson';
+            `data/20250924-hamburg/${window.specialty}.geojson` :
+            `data/20250919-luechow/${window.specialty}.geojson`;
 
         const binCount = parseInt(searchParams.get('bins')) || 4;
 
