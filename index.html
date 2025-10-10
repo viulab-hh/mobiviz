@@ -66,10 +66,13 @@
         }
 
         .mapboxgl-ctrl-top-right .mapboxgl-ctrl,
-        .mapboxgl-ctrl-top-left .mapboxgl-ctrl,
+        .mapboxgl-ctrl-top-left .mapboxgl-ctrl {
+            margin: 20px;
+        }
+
         .mapboxgl-ctrl-bottom-left .mapboxgl-ctrl,
         .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
-            margin: 20px;
+            margin: 0;
         }
 
         .mapboxgl-ctrl-group button+button {
@@ -253,12 +256,74 @@
             width: 36px !important;
             height: 36px !important;
         }
+
+        #legend-container {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            z-index: 1;
+            color: white;
+            font-size: 12px;
+        }
+
+        .legend-title {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 6px;
+            opacity: 0.9;
+        }
+
+        .legend-bar {
+            display: flex;
+            height: 8px;
+            width: 300px;
+            position: relative;
+        }
+
+        .legend-segment {
+            flex: 1;
+        }
+
+        .legend-segment:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .legend-segment:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .legend-labels {
+            position: relative;
+            height: 20px;
+            margin-top: 4px;
+        }
+
+        .legend-label {
+            position: absolute;
+            font-size: 11px;
+            color: white;
+            white-space: nowrap;
+            transform: translateX(-50%);
+        }
+
+        .legend-label.left-aligned {
+            transform: translateX(0);
+        }
+
+        .legend-label.right-aligned {
+            transform: translateX(-100%);
+        }
     </style>
 </head>
 
 <body>
     <div class="buttons-tl">
         <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+    </div>
+
+    <div id="legend-container">
+        <div class="legend-title">Erreichbarkeit</div>
+        <div id="legend-content"></div>
     </div>
 
     <div id="param-form">
@@ -410,9 +475,17 @@
 
             // Try to set immediately if DOM is ready, otherwise wait
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', setActiveTabs);
+                document.addEventListener('DOMContentLoaded', function() {
+                    setActiveTabs();
+                    if (typeof updateLegend === 'function') {
+                        updateLegend();
+                    }
+                });
             } else {
                 setActiveTabs();
+                if (typeof updateLegend === 'function') {
+                    updateLegend();
+                }
             }
         })();
 
@@ -617,6 +690,9 @@
                 window.specialty = currentSpecialty;
                 window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
 
+                // Update legend
+                updateLegend();
+
                 // Update data path
                 const dataPath = window.dataParam == 'h' ?
                     `data/20250924-hamburg/${currentSpecialty}.geojson` :
@@ -667,6 +743,106 @@
             const caption = document.getElementById('weightedCaption');
             if (caption) {
                 caption.textContent = isWeighted ? 'Zeit in Minuten, gewichtet nach Bevölkerung' : 'Zeit in Minuten';
+            }
+        }
+
+        // Global function for updating legend
+        function updateLegend() {
+            const legendContent = document.getElementById('legend-content');
+            if (!legendContent) return;
+
+            const prettyBreaks = window.dataParam == 'h' ? [2, 4, 6] : [5, 10, 15];
+            const colorMin = [50, 165, 202]; // Blue
+            const colorMax = [218, 85, 80];  // Red
+            
+            if (window.prognosis) {
+                // Prognosis mode: blue to white to red
+                const numSegments = 8;
+                let segments = '';
+                let labels = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    let color;
+                    if (i < numSegments / 2) {
+                        // Blue to white (left half)
+                        // t should go from 0 to 1 across the left 4 segments
+                        const t = i / (numSegments / 2 - 1);
+                        const r = Math.round((1 - t) * colorMin[0] + t * 255);
+                        const g = Math.round((1 - t) * colorMin[1] + t * 255);
+                        const b = Math.round((1 - t) * colorMin[2] + t * 255);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                    } else {
+                        // White to red (right half)
+                        // t should go from 0 to 1 across the right 4 segments
+                        const t = (i - numSegments / 2) / (numSegments / 2 - 1);
+                        const r = Math.round((1 - t) * 255 + t * colorMax[0]);
+                        const g = Math.round((1 - t) * 255 + t * colorMax[1]);
+                        const b = Math.round((1 - t) * 255 + t * colorMax[2]);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                    }
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels: niedriger (left), gleich (center), höher (right)
+                labels = `
+                    <div class="legend-label left-aligned" style="left: 0;">niedriger</div>
+                    <div class="legend-label" style="left: 50%;">gleich</div>
+                    <div class="legend-label right-aligned" style="left: 100%;">höher</div>
+                `;
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
+            } else if (window.weighted) {
+                // Weighted non-prognosis: discrete segments from blue to red
+                const numSegments = 4;
+                let segments = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    const t = i / (numSegments - 1);
+                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                    const color = `rgb(${r}, ${g}, ${b})`;
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels: niedrig (left), hoch (right)
+                const labels = `
+                    <div class="legend-label left-aligned" style="left: 0;">niedrig</div>
+                    <div class="legend-label right-aligned" style="left: 100%;">hoch</div>
+                `;
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
+            } else {
+                // Unweighted: discrete segments with break labels
+                const numSegments = prettyBreaks.length + 1;
+                let segments = '';
+                let labels = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    const t = i / prettyBreaks.length;
+                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                    const color = `rgb(${r}, ${g}, ${b})`;
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels at breaks between segments
+                for (let i = 0; i < prettyBreaks.length; i++) {
+                    const position = ((i + 1) / numSegments) * 100;
+                    labels += `<div class="legend-label" style="left: ${position}%;">${prettyBreaks[i]} min</div>`;
+                }
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
             }
         }
 
