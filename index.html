@@ -724,6 +724,7 @@
 
             allVals.sort((a, b) => a - b);
             console.log('Max value:', allVals[allVals.length - 1]);
+            console.log('Min value:', allVals[0]);
 
             const quantiles = (arr, bins = binCount) => {
                 const result = [];
@@ -733,10 +734,32 @@
                 return result;
             };
 
-            const combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
-            console.log('Quantiles:', combinedQuantiles);
+            let combinedQuantiles, positiveQuantiles, negativeQuantiles;
+            
+            if (window.prognosis) {
+                // Separate positive and negative values for prognosis mode
+                const positiveVals = allVals.filter(v => v > 0).sort((a, b) => a - b);
+                const negativeVals = allVals.filter(v => v < 0).sort((a, b) => a - b);
+                const zeroVals = allVals.filter(v => v === 0);
+                
+                positiveQuantiles = positiveVals.length > 0 ? quantiles(positiveVals) : [];
+                negativeQuantiles = negativeVals.length > 0 ? quantiles(negativeVals) : [];
+                
+                console.log('Positive values count:', positiveVals.length, 'range:', positiveVals[0], 'to', positiveVals[positiveVals.length - 1]);
+                console.log('Negative values count:', negativeVals.length, 'range:', negativeVals[0], 'to', negativeVals[negativeVals.length - 1]);
+                console.log('Zero values count:', zeroVals.length);
+                console.log('Positive quantiles (increases):', positiveQuantiles);
+                console.log('Negative quantiles (decreases):', negativeQuantiles);
+            } else {
+                combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
+                console.log('Quantiles:', combinedQuantiles);
+            }
 
-            const ef = extrusionFactor / allVals[allVals.length - 1];
+            // For prognosis mode, use maximum absolute value for proper scaling
+            const maxAbsValue = window.prognosis ? 
+                Math.max(Math.abs(allVals[0]), Math.abs(allVals[allVals.length - 1])) :
+                allVals[allVals.length - 1];
+            const ef = extrusionFactor / maxAbsValue;
 
             const extrusions = [];
             geojson.features.forEach((f, i) => {
@@ -749,7 +772,7 @@
                     id: i * 2,
                     geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 1)] },
                     properties: {
-                        color: interpolateColor(t[0], combinedQuantiles),
+                        color: interpolateColor(t[0], combinedQuantiles, positiveQuantiles, negativeQuantiles),
                         baseHeight: 0,
                         targetHeight: Math.abs(t[0]) * ef
                     }
@@ -761,7 +784,7 @@
                     id: i * 2 + 1,
                     geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 0.5)] },
                     properties: {
-                        color: interpolateColor(window.mode === 'nowMinMax' ? t[1] : t[0], combinedQuantiles),
+                        color: interpolateColor(window.mode === 'nowMinMax' ? t[1] : t[0], combinedQuantiles, positiveQuantiles, negativeQuantiles),
                         baseHeight: 0,
                         targetHeight: window.mode === 'nowMinMax' ? Math.abs(t[1]) * ef : 0
                     }
@@ -845,16 +868,64 @@
             }
         }
 
-        const interpolateColor = (value, thresholds) => {
+        const interpolateColor = (value, thresholds, positiveThresholds, negativeThresholds) => {
             let colorMin, colorMax;
+            let useThresholds = thresholds;
+            
             if (window.prognosis) {
+                // Zero values should always be white (no change)
+                if (value === 0) {
+                    return 'rgb(255, 255, 255)';
+                }
+                
                 if (value > 0) {
                     colorMin = [255, 255, 255];
                     colorMax = [218, 85, 80];
+                    // Use separate positive quantiles if available
+                    if (positiveThresholds && positiveThresholds.length > 0) {
+                        useThresholds = positiveThresholds;
+                        
+                        // Handle values below the minimum threshold
+                        if (value < useThresholds[0]) {
+                            // Interpolate between white and first color step
+                            const t = value / useThresholds[0] * (1 / useThresholds.length);
+                            const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                            const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                            const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                            return `rgb(${r}, ${g}, ${b})`;
+                        }
+                    }
                 }
                 else {
                     colorMin = [255, 255, 255];
                     colorMax = [50, 165, 202];
+                    // Use separate negative quantiles if available, and work with absolute values
+                    if (negativeThresholds && negativeThresholds.length > 0) {
+                        useThresholds = negativeThresholds.map(v => Math.abs(v));
+                        const absValue = Math.abs(value);
+                        
+                        // Handle values below the minimum threshold
+                        if (absValue < useThresholds[0]) {
+                            // Interpolate between white and first color step
+                            const t = absValue / useThresholds[0] * (1 / useThresholds.length);
+                            const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                            const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                            const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                            return `rgb(${r}, ${g}, ${b})`;
+                        }
+                        
+                        // For negative values, we need to compare absolute values
+                        for (let i = 0; i < useThresholds.length; i++) {
+                            if (absValue <= useThresholds[i]) {
+                                const t = (i + 1) / useThresholds.length;
+                                const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                                const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                                const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                                return `rgb(${r}, ${g}, ${b})`;
+                            }
+                        }
+                        return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
+                    }
                 }
             }
             else {
@@ -862,9 +933,10 @@
                 colorMax = [218, 85, 80];
             }
 
-            for (let i = 0; i < thresholds.length; i++) {
-                if (value <= thresholds[i]) {
-                    const t = i / thresholds.length;
+            // Standard threshold-based interpolation
+            for (let i = 0; i < useThresholds.length; i++) {
+                if (value <= useThresholds[i]) {
+                    const t = (i + 1) / useThresholds.length;
                     const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
                     const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
                     const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
