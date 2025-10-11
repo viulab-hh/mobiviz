@@ -1246,13 +1246,14 @@
                     if (positiveThresholds && positiveThresholds.length > 0) {
                         useThresholds = positiveThresholds;
                         
-                        // Handle values below the minimum threshold
-                        if (value < useThresholds[0]) {
-                            // Interpolate between white and color at first threshold
-                            const t = value / useThresholds[0];
-                            const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
-                            const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
-                            const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                        // Handle values below the minimum threshold (first segment)
+                        if (value <= useThresholds[0]) {
+                            // Interpolate from 0 to threshold[0]
+                            const segmentT = value / useThresholds[0];
+                            const overallT = segmentT / useThresholds.length;
+                            const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                            const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                            const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
                             return `rgb(${r}, ${g}, ${b})`;
                         }
                         
@@ -1280,13 +1281,14 @@
                         useThresholds = negativeThresholds.map(v => Math.abs(v));
                         const absValue = Math.abs(value);
                         
-                        // Handle values below the minimum threshold
-                        if (absValue < useThresholds[0]) {
-                            // Interpolate between white and color at first threshold
-                            const t = absValue / useThresholds[0];
-                            const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
-                            const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
-                            const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                        // Handle values below the minimum threshold (first segment)
+                        if (absValue <= useThresholds[0]) {
+                            // Interpolate from 0 to threshold[0]
+                            const segmentT = absValue / useThresholds[0];
+                            const overallT = segmentT / useThresholds.length;
+                            const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                            const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                            const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
                             return `rgb(${r}, ${g}, ${b})`;
                         }
                         
