@@ -756,25 +756,26 @@
             const colorMax = [218, 85, 80];  // Red
             
             if (window.prognosis) {
-                // Prognosis mode: blue to white to red
-                const numSegments = 8;
+                // Prognosis mode: 3 blue + 1 white + 3 red = 7 segments
+                const numSegments = 7;
                 let segments = '';
                 let labels = '';
                 
                 for (let i = 0; i < numSegments; i++) {
                     let color;
-                    if (i < numSegments / 2) {
-                        // Blue to white (left half)
-                        // t should go from 0 to 1 across the left 4 segments
-                        const t = i / (numSegments / 2 - 1);
+                    if (i < 3) {
+                        // Blue segments (0, 1, 2): go from dark blue to 2/3 of the way to white
+                        const t = i / 3; // 0, 0.33, 0.67
                         const r = Math.round((1 - t) * colorMin[0] + t * 255);
                         const g = Math.round((1 - t) * colorMin[1] + t * 255);
                         const b = Math.round((1 - t) * colorMin[2] + t * 255);
                         color = `rgb(${r}, ${g}, ${b})`;
+                    } else if (i === 3) {
+                        // White segment in the middle
+                        color = 'rgb(255, 255, 255)';
                     } else {
-                        // White to red (right half)
-                        // t should go from 0 to 1 across the right 4 segments
-                        const t = (i - numSegments / 2) / (numSegments / 2 - 1);
+                        // Red segments (4, 5, 6): start 1/3 of the way from white, go to dark red
+                        const t = (i - 3) / 3; // 0.33, 0.67, 1.0
                         const r = Math.round((1 - t) * 255 + t * colorMax[0]);
                         const g = Math.round((1 - t) * 255 + t * colorMax[1]);
                         const b = Math.round((1 - t) * 255 + t * colorMax[2]);
@@ -918,8 +919,17 @@
                 const negativeVals = allVals.filter(v => v < 0).sort((a, b) => a - b);
                 const zeroVals = allVals.filter(v => v === 0);
                 
-                positiveQuantiles = positiveVals.length > 0 ? quantiles(positiveVals) : [];
-                negativeQuantiles = negativeVals.length > 0 ? quantiles(negativeVals) : [];
+                // Calculate 9 quantiles (8 breaks) and use only 1st, 3rd, 5th, 7th (indices 0, 2, 4, 6)
+                // This avoids having values too close to zero mapped to white
+                const allPositiveQuantiles = positiveVals.length > 0 ? quantiles(positiveVals, 9) : [];
+                const allNegativeQuantiles = negativeVals.length > 0 ? quantiles(negativeVals, 9) : [];
+                
+                positiveQuantiles = allPositiveQuantiles.length >= 7 ? 
+                    [allPositiveQuantiles[0], allPositiveQuantiles[2], allPositiveQuantiles[4], allPositiveQuantiles[6]] : 
+                    allPositiveQuantiles;
+                negativeQuantiles = allNegativeQuantiles.length >= 7 ? 
+                    [allNegativeQuantiles[0], allNegativeQuantiles[2], allNegativeQuantiles[4], allNegativeQuantiles[6]] : 
+                    allNegativeQuantiles;
                 
                 console.log('Positive values count:', positiveVals.length, 'range:', positiveVals[0], 'to', positiveVals[positiveVals.length - 1]);
                 console.log('Negative values count:', negativeVals.length, 'range:', negativeVals[0], 'to', negativeVals[negativeVals.length - 1]);
