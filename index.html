@@ -66,10 +66,13 @@
         }
 
         .mapboxgl-ctrl-top-right .mapboxgl-ctrl,
-        .mapboxgl-ctrl-top-left .mapboxgl-ctrl,
+        .mapboxgl-ctrl-top-left .mapboxgl-ctrl {
+            margin: 20px;
+        }
+
         .mapboxgl-ctrl-bottom-left .mapboxgl-ctrl,
         .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
-            margin: 20px;
+            margin: 0;
         }
 
         .mapboxgl-ctrl-group button+button {
@@ -253,6 +256,170 @@
             width: 36px !important;
             height: 36px !important;
         }
+
+        #legend-container {
+            position: absolute;
+            right: 20px;
+            bottom: 28px;
+            z-index: 1;
+            color: white;
+            font-size: 12px;
+            left: auto;
+            transform: none;
+        }
+
+        .legend-title {
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 6px;
+            opacity: 0.9;
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .legend-bar {
+            display: flex;
+            height: 8px;
+            width: 300px;
+            position: relative;
+        }
+
+        .legend-segment {
+            flex: 1;
+        }
+
+        .legend-segment:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .legend-segment:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .legend-labels {
+            position: relative;
+            height: 20px;
+            margin-top: 4px;
+        }
+
+        .legend-label {
+            position: absolute;
+            font-size: 12px;
+            color: white;
+            white-space: nowrap;
+            transform: translateX(-50%);
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .legend-label.left-aligned {
+            transform: translateX(0);
+        }
+
+        .legend-label.right-aligned {
+            transform: translateX(-100%);
+        }
+
+        /* Drawer handle for mobile */
+        #drawer-handle {
+            display: none;
+        }
+
+        /* Mobile responsive styles */
+        @media screen and (max-width: 768px) {
+            #param-form {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                margin: 0;
+                border-radius: 16px 16px 0 0;
+                padding: 48px 20px 20px;
+                max-height: 80vh;
+                overflow-y: auto;
+                transform: translateY(calc(100% - 48px));
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+
+            #param-form.drawer-open {
+                transform: translateY(0);
+            }
+
+            #drawer-handle {
+                display: flex;
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 48px;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            #drawer-handle::before {
+                content: '';
+                width: 40px;
+                height: 4px;
+                background: rgba(255, 255, 255, 0.4);
+                border-radius: 2px;
+            }
+
+            #legend-container {
+                position: fixed;
+                left: 50%;
+                transform: translateX(-50%);
+                right: auto;
+                bottom: 56px;
+                transition: bottom 0.3s ease;
+                z-index: 999;
+            }
+
+            .buttons-tl {
+                top: 10px;
+                left: 10px;
+            }
+
+            button {
+                padding: 10px 14px;
+                font-size: 18px;
+            }
+        }
+
+        /* Very small screens */
+        @media screen and (max-width: 480px) {
+            #param-form {
+                padding: 48px 16px 16px;
+            }
+
+            .form-section-title {
+                font-size: 14px;
+            }
+
+            .tab-button {
+                padding: 6px 8px;
+                font-size: 13px;
+            }
+
+            select {
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+
+            .legend-bar {
+                width: 250px;
+            }
+        }
     </style>
 </head>
 
@@ -262,6 +429,7 @@
     </div>
 
     <div id="param-form">
+        <div id="drawer-handle"></div>
         <form id="paramForm">
             <div class="form-container">
                 <div class="form-section">
@@ -322,6 +490,11 @@
                 </div>
             </div>
         </form>
+    </div>
+
+    <div id="legend-container">
+        <div class="legend-title">Erreichbarkeit</div>
+        <div id="legend-content"></div>
     </div>
 
     <script>
@@ -410,9 +583,17 @@
 
             // Try to set immediately if DOM is ready, otherwise wait
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', setActiveTabs);
+                document.addEventListener('DOMContentLoaded', function() {
+                    setActiveTabs();
+                    if (typeof updateLegend === 'function') {
+                        updateLegend();
+                    }
+                });
             } else {
                 setActiveTabs();
+                if (typeof updateLegend === 'function') {
+                    updateLegend();
+                }
             }
         })();
 
@@ -459,6 +640,59 @@
 
         // JavaScript for tab bar interactions
         document.addEventListener('DOMContentLoaded', function () {
+            // Handle drawer toggle for mobile
+            const drawerHandle = document.getElementById('drawer-handle');
+            const paramForm = document.getElementById('param-form');
+            const legendContainer = document.getElementById('legend-container');
+            
+            function updateLegendPosition() {
+                if (legendContainer) {
+                    if (window.innerWidth <= 768 && paramForm) {
+                        if (paramForm.classList.contains('drawer-open')) {
+                            // Get the actual height of the drawer
+                            const drawerHeight = paramForm.offsetHeight;
+                            // Position legend 8px above the drawer top
+                            legendContainer.style.bottom = (drawerHeight + 8) + 'px';
+                        } else {
+                            // Position legend 8px above the collapsed drawer (48px handle + 8px gap)
+                            legendContainer.style.bottom = '56px';
+                        }
+                    } else {
+                        // Reset inline styles for desktop - let CSS take over
+                        legendContainer.style.bottom = '';
+                    }
+                }
+            }
+            
+            if (drawerHandle && paramForm) {
+                drawerHandle.addEventListener('click', function () {
+                    paramForm.classList.toggle('drawer-open');
+                    // Update legend position after animation starts
+                    setTimeout(updateLegendPosition, 10);
+                });
+
+                // Close drawer when clicking outside on mobile
+                document.addEventListener('click', function(event) {
+                    if (window.innerWidth <= 768) {
+                        if (!paramForm.contains(event.target) && paramForm.classList.contains('drawer-open')) {
+                            paramForm.classList.remove('drawer-open');
+                            setTimeout(updateLegendPosition, 10);
+                        }
+                    }
+                });
+
+                // Prevent closing when clicking inside the form
+                paramForm.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                });
+
+                // Update legend position on window resize
+                window.addEventListener('resize', updateLegendPosition);
+                
+                // Initial position
+                updateLegendPosition();
+            }
+
             // Handle specialty select
             const specialtySelect = document.getElementById('specialtySelect');
             if (specialtySelect) {
@@ -617,6 +851,9 @@
                 window.specialty = currentSpecialty;
                 window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
 
+                // Update legend
+                updateLegend();
+
                 // Update data path
                 const dataPath = window.dataParam == 'h' ?
                     `data/20250924-hamburg/${currentSpecialty}.geojson` :
@@ -667,6 +904,107 @@
             const caption = document.getElementById('weightedCaption');
             if (caption) {
                 caption.textContent = isWeighted ? 'Zeit in Minuten, gewichtet nach Bevölkerung' : 'Zeit in Minuten';
+            }
+        }
+
+        // Global function for updating legend
+        function updateLegend() {
+            const legendContent = document.getElementById('legend-content');
+            if (!legendContent) return;
+
+            const prettyBreaks = window.dataParam == 'h' ? [2, 4, 6] : [5, 10, 15];
+            const colorMin = [50, 165, 202]; // Blue
+            const colorMax = [218, 85, 80];  // Red
+            
+            if (window.prognosis) {
+                // Prognosis mode: 3 blue + 1 white + 3 red = 7 segments
+                const numSegments = 7;
+                let segments = '';
+                let labels = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    let color;
+                    if (i < 3) {
+                        // Blue segments (0, 1, 2): go from dark blue to 2/3 of the way to white
+                        const t = i / 3; // 0, 0.33, 0.67
+                        const r = Math.round((1 - t) * colorMin[0] + t * 255);
+                        const g = Math.round((1 - t) * colorMin[1] + t * 255);
+                        const b = Math.round((1 - t) * colorMin[2] + t * 255);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                    } else if (i === 3) {
+                        // White segment in the middle
+                        color = 'rgb(255, 255, 255)';
+                    } else {
+                        // Red segments (4, 5, 6): start 1/3 of the way from white, go to dark red
+                        const t = (i - 3) / 3; // 0.33, 0.67, 1.0
+                        const r = Math.round((1 - t) * 255 + t * colorMax[0]);
+                        const g = Math.round((1 - t) * 255 + t * colorMax[1]);
+                        const b = Math.round((1 - t) * 255 + t * colorMax[2]);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                    }
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels: niedriger (left), gleich (center), höher (right)
+                labels = `
+                    <div class="legend-label left-aligned" style="left: 0;">niedriger</div>
+                    <div class="legend-label" style="left: 50%;">gleich</div>
+                    <div class="legend-label right-aligned" style="left: 100%;">höher</div>
+                `;
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
+            } else if (window.weighted) {
+                // Weighted non-prognosis: discrete segments from blue to red
+                const numSegments = 4;
+                let segments = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    const t = i / (numSegments - 1);
+                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                    const color = `rgb(${r}, ${g}, ${b})`;
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels: niedrig (left), hoch (right)
+                const labels = `
+                    <div class="legend-label left-aligned" style="left: 0;">niedrig</div>
+                    <div class="legend-label right-aligned" style="left: 100%;">hoch</div>
+                `;
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
+            } else {
+                // Unweighted: discrete segments with break labels
+                const numSegments = prettyBreaks.length + 1;
+                let segments = '';
+                let labels = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    const t = i / prettyBreaks.length;
+                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                    const color = `rgb(${r}, ${g}, ${b})`;
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels at breaks between segments
+                for (let i = 0; i < prettyBreaks.length; i++) {
+                    const position = ((i + 1) / numSegments) * 100;
+                    labels += `<div class="legend-label" style="left: ${position}%;">${prettyBreaks[i]} min</div>`;
+                }
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
             }
         }
 
@@ -742,12 +1080,35 @@
                 const negativeVals = allVals.filter(v => v < 0).sort((a, b) => a - b);
                 const zeroVals = allVals.filter(v => v === 0);
                 
-                positiveQuantiles = positiveVals.length > 0 ? quantiles(positiveVals) : [];
-                negativeQuantiles = negativeVals.length > 0 ? quantiles(negativeVals) : [];
+                // Determine which range has higher max absolute value
+                const maxPositive = positiveVals.length > 0 ? positiveVals[positiveVals.length - 1] : 0;
+                const maxNegative = negativeVals.length > 0 ? Math.abs(negativeVals[0]) : 0;
+                
+                // Calculate 9 quantiles (8 breaks) and use only 1st, 3rd, 5th, 7th (indices 0, 2, 4, 6)
+                // Use the range with higher max abs value for both directions (symmetric mapping)
+                if (maxPositive >= maxNegative && positiveVals.length > 0) {
+                    // Use positive quantiles for both directions
+                    const allPositiveQuantiles = quantiles(positiveVals, 9);
+                    positiveQuantiles = allPositiveQuantiles.length >= 7 ? 
+                        [allPositiveQuantiles[0], allPositiveQuantiles[2], allPositiveQuantiles[4], allPositiveQuantiles[6]] : 
+                        allPositiveQuantiles;
+                    // Apply same thresholds with reversed signs for negative range
+                    negativeQuantiles = positiveQuantiles.map(q => -q).reverse();
+                } else if (negativeVals.length > 0) {
+                    // Use negative quantiles for both directions
+                    const allNegativeQuantiles = quantiles(negativeVals, 9);
+                    negativeQuantiles = allNegativeQuantiles.length >= 7 ? 
+                        [allNegativeQuantiles[0], allNegativeQuantiles[2], allNegativeQuantiles[4], allNegativeQuantiles[6]] : 
+                        allNegativeQuantiles;
+                    // Apply same thresholds with reversed signs for positive range
+                    positiveQuantiles = negativeQuantiles.map(q => -q).reverse();
+                }
                 
                 console.log('Positive values count:', positiveVals.length, 'range:', positiveVals[0], 'to', positiveVals[positiveVals.length - 1]);
                 console.log('Negative values count:', negativeVals.length, 'range:', negativeVals[0], 'to', negativeVals[negativeVals.length - 1]);
                 console.log('Zero values count:', zeroVals.length);
+                console.log('Max absolute values - Positive:', maxPositive, 'Negative:', maxNegative);
+                console.log('Using', maxPositive >= maxNegative ? 'positive' : 'negative', 'range for symmetric thresholds');
                 console.log('Positive quantiles (increases):', positiveQuantiles);
                 console.log('Negative quantiles (decreases):', negativeQuantiles);
             } else {
@@ -887,13 +1248,28 @@
                         
                         // Handle values below the minimum threshold
                         if (value < useThresholds[0]) {
-                            // Interpolate between white and first color step
-                            const t = value / useThresholds[0] * (1 / useThresholds.length);
+                            // Interpolate between white and color at first threshold
+                            const t = value / useThresholds[0];
                             const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
                             const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
                             const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
                             return `rgb(${r}, ${g}, ${b})`;
                         }
+                        
+                        // Interpolate between thresholds
+                        for (let i = 0; i < useThresholds.length - 1; i++) {
+                            if (value <= useThresholds[i + 1]) {
+                                // Value is between useThresholds[i] and useThresholds[i+1]
+                                const segmentT = (value - useThresholds[i]) / (useThresholds[i + 1] - useThresholds[i]);
+                                const overallT = (i + 1 + segmentT) / useThresholds.length;
+                                const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                                const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                                const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                                return `rgb(${r}, ${g}, ${b})`;
+                            }
+                        }
+                        // Value is above the highest threshold
+                        return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
                     }
                 }
                 else {
@@ -906,24 +1282,27 @@
                         
                         // Handle values below the minimum threshold
                         if (absValue < useThresholds[0]) {
-                            // Interpolate between white and first color step
-                            const t = absValue / useThresholds[0] * (1 / useThresholds.length);
+                            // Interpolate between white and color at first threshold
+                            const t = absValue / useThresholds[0];
                             const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
                             const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
                             const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
                             return `rgb(${r}, ${g}, ${b})`;
                         }
                         
-                        // For negative values, we need to compare absolute values
-                        for (let i = 0; i < useThresholds.length; i++) {
-                            if (absValue <= useThresholds[i]) {
-                                const t = (i + 1) / useThresholds.length;
-                                const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
-                                const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
-                                const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                        // Interpolate between thresholds
+                        for (let i = 0; i < useThresholds.length - 1; i++) {
+                            if (absValue <= useThresholds[i + 1]) {
+                                // Value is between useThresholds[i] and useThresholds[i+1]
+                                const segmentT = (absValue - useThresholds[i]) / (useThresholds[i + 1] - useThresholds[i]);
+                                const overallT = (i + 1 + segmentT) / useThresholds.length;
+                                const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                                const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                                const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
                                 return `rgb(${r}, ${g}, ${b})`;
                             }
                         }
+                        // Value is above the highest threshold
                         return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
                     }
                 }
@@ -934,15 +1313,38 @@
             }
 
             // Standard threshold-based interpolation
-            for (let i = 0; i < useThresholds.length; i++) {
-                if (value <= useThresholds[i]) {
-                    const t = (i + 1) / useThresholds.length;
-                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
-                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
-                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+            // For non-prognosis: we have numSegments = useThresholds.length + 1 color segments
+            // Segment 0: 0 to threshold[0]
+            // Segment 1: threshold[0] to threshold[1]
+            // ...
+            // Last segment: threshold[n-1] to infinity
+            
+            const numSegments = useThresholds.length + 1;
+            
+            // Handle values below the minimum threshold (first segment)
+            if (value <= useThresholds[0]) {
+                // Linear interpolation from 0 to threshold[0]
+                const segmentT = value / useThresholds[0];
+                const overallT = segmentT / numSegments;
+                const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+            
+            // Interpolate between thresholds
+            for (let i = 0; i < useThresholds.length - 1; i++) {
+                if (value <= useThresholds[i + 1]) {
+                    // Value is between useThresholds[i] and useThresholds[i+1]
+                    const segmentT = (value - useThresholds[i]) / (useThresholds[i + 1] - useThresholds[i]);
+                    const overallT = (i + 1 + segmentT) / numSegments;
+                    const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                    const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                    const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
                     return `rgb(${r}, ${g}, ${b})`;
                 }
             }
+            // Value is above the highest threshold (last segment)
             return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
         };
 
