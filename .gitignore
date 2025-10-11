@@ -20,4 +20,3 @@ node_modules/
 # Temporary files
 *.tmp
 *.temp
-start-server.sh
