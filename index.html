@@ -885,12 +885,57 @@
 
     <div id="map"></div>
 
-    <script src="tokens.js"></script>
+    <script src="tokens.js?version=1"></script>
     <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
     <script>
-        // SEARCH PARAMS
+        // PASSWORD PROTECTION with SHA-256 hashing
         const searchParams = new URLSearchParams(window.location.search);
-
+        const providedPassword = searchParams.get('pw');
+        
+        // Password hash
+        const correctPasswordHash = PASSWORD_HASH;
+        
+        // SHA-256 hash function
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+        
+        // Check if password is correct or already validated in session
+        (async function checkAuth() {
+            if (!sessionStorage.getItem('authenticated')) {
+                if (!providedPassword) {
+                    showAccessDenied();
+                    throw new Error('Access Denied');
+                }
+                
+                const providedHash = await sha256(providedPassword);
+                if (providedHash !== correctPasswordHash) {
+                    showAccessDenied();
+                    throw new Error('Access Denied');
+                } else {
+                    // Store authentication in session
+                    sessionStorage.setItem('authenticated', 'true');
+                }
+            }
+        })();
+        
+        function showAccessDenied() {
+            document.body.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100vh; 
+                            background: #000; color: #fff; font-family: 'IBM Plex Sans', sans-serif; 
+                            text-align: center; flex-direction: column; gap: 20px;">
+                    <h1>Zugriff verweigert</h1>
+                    <p>Für diese Visualisierung ist eine Authentifizierung erforderlich.</p>
+                    <p style="font-size: 0.9em; opacity: 0.7;">Bitte verwenden Sie den richtigen Link.</p>
+                </div>
+            `;
+        }
+        
+        // SEARCH PARAMS
         window.mode = (searchParams.get('mode') || 'nowNom');
         // console.log("mode: ", window.mode);
         window.dataParam = (searchParams.get('data') || 'h');
