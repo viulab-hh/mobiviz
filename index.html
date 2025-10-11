@@ -892,7 +892,7 @@
         const searchParams = new URLSearchParams(window.location.search);
 
         window.mode = (searchParams.get('mode') || 'nowNom');
-        console.log("mode: ", window.mode);
+        // console.log("mode: ", window.mode);
         window.dataParam = (searchParams.get('data') || 'h');
         window.weighted = (searchParams.get('weighted') === 'true');
         window.specialty = (searchParams.get('specialty') || 'hausaerzteErwachsene');
@@ -912,7 +912,7 @@
             const legendContent = document.getElementById('legend-content');
             if (!legendContent) return;
 
-            const prettyBreaks = window.dataParam == 'h' ? [2, 4, 6] : [5, 10, 15];
+            const prettyBreaks = /*window.dataParam == 'h' ? [2, 4, 6] :*/ [5, 10, 15];
             const colorMin = [50, 165, 202]; // Blue
             const colorMax = [218, 85, 80];  // Red
             
@@ -945,11 +945,11 @@
                     segments += `<div class="legend-segment" style="background: ${color};"></div>`;
                 }
                 
-                // Labels: niedriger (left), gleich (center), höher (right)
+                // Labels: besser (left), gleich (center), schlechter (right)
                 labels = `
-                    <div class="legend-label left-aligned" style="left: 0;">niedriger</div>
+                    <div class="legend-label left-aligned" style="left: 0;">besser</div>
                     <div class="legend-label" style="left: 50%;">gleich</div>
-                    <div class="legend-label right-aligned" style="left: 100%;">höher</div>
+                    <div class="legend-label right-aligned" style="left: 100%;">schlechter</div>
                 `;
                 
                 legendContent.innerHTML = `
@@ -1016,7 +1016,7 @@
 
         // SEARCH PARAMS
 
-        const prettyBreaks = window.dataParam == 'h' ? [2, 4, 6] : [5, 10, 15];
+        const prettyBreaks = /*window.dataParam == 'h' ? [2, 4, 6] :*/ [5, 10, 15];
 
         const verticesCountNow = 12;
         const verticesCountPrognosis = 4;
@@ -1061,8 +1061,8 @@
             });
 
             allVals.sort((a, b) => a - b);
-            console.log('Max value:', allVals[allVals.length - 1]);
-            console.log('Min value:', allVals[0]);
+            // console.log('Max value:', allVals[allVals.length - 1]);
+            // console.log('Min value:', allVals[0]);
 
             const quantiles = (arr, bins = binCount) => {
                 const result = [];
@@ -1104,16 +1104,16 @@
                     positiveQuantiles = negativeQuantiles.map(q => -q).reverse();
                 }
                 
-                console.log('Positive values count:', positiveVals.length, 'range:', positiveVals[0], 'to', positiveVals[positiveVals.length - 1]);
-                console.log('Negative values count:', negativeVals.length, 'range:', negativeVals[0], 'to', negativeVals[negativeVals.length - 1]);
-                console.log('Zero values count:', zeroVals.length);
-                console.log('Max absolute values - Positive:', maxPositive, 'Negative:', maxNegative);
-                console.log('Using', maxPositive >= maxNegative ? 'positive' : 'negative', 'range for symmetric thresholds');
-                console.log('Positive quantiles (increases):', positiveQuantiles);
-                console.log('Negative quantiles (decreases):', negativeQuantiles);
+                // console.log('Positive values count:', positiveVals.length, 'range:', positiveVals[0], 'to', positiveVals[positiveVals.length - 1]);
+                // console.log('Negative values count:', negativeVals.length, 'range:', negativeVals[0], 'to', negativeVals[negativeVals.length - 1]);
+                // console.log('Zero values count:', zeroVals.length);
+                // console.log('Max absolute values - Positive:', maxPositive, 'Negative:', maxNegative);
+                // console.log('Using', maxPositive >= maxNegative ? 'positive' : 'negative', 'range for symmetric thresholds');
+                // console.log('Positive quantiles (increases):', positiveQuantiles);
+                // console.log('Negative quantiles (decreases):', negativeQuantiles);
             } else {
                 combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
-                console.log('Quantiles:', combinedQuantiles);
+                // console.log('Quantiles:', combinedQuantiles);
             }
 
             // For prognosis mode, use maximum absolute value for proper scaling
@@ -1121,6 +1121,8 @@
                 Math.max(Math.abs(allVals[0]), Math.abs(allVals[allVals.length - 1])) :
                 allVals[allVals.length - 1];
             const ef = extrusionFactor / maxAbsValue;
+            console.log('maxAbsValue: ', maxAbsValue);
+            console.log('ef: ', ef);
 
             const extrusions = [];
             geojson.features.forEach((f, i) => {
@@ -1159,8 +1161,16 @@
                     data: { type: 'FeatureCollection', features: extrusions }
                 });
 
-                const zoomAlpha0 = 0.5;
-                const zoomAlphaZone = [12.25, 12.75];
+                // Find the first label layer to insert our layer before it
+                // This ensures labels appear on top of 3D extrusions
+                const layers = map.getStyle().layers;
+                let firstLabelLayerId;
+                for (const layer of layers) {
+                    if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+                        firstLabelLayerId = layer.id;
+                        break;
+                    }
+                }
 
                 map.addLayer({
                     id: 'extruded-layer',
@@ -1168,18 +1178,11 @@
                     source: 'cells',
                     paint: {
                         'fill-extrusion-color': ['get', 'color'],
-                        // 'fill-extrusion-opacity': ['get', 'opacity'],
-                        'fill-extrusion-opacity': [
-                            'interpolate',
-                            ['linear'],
-                            ['zoom'],
-                            zoomAlphaZone[0], zoomAlpha0,
-                            zoomAlphaZone[1], 1
-                        ],
+                        'fill-extrusion-opacity': 1,
                         'fill-extrusion-height': ['coalesce', ['feature-state', 'height'], 0],
                         'fill-extrusion-base': ['coalesce', ['get', 'baseHeight'], 0]
                     }
-                });
+                }, firstLabelLayerId);
             }
             else {
                 // Store current heights before updating data
