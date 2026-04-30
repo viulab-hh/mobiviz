@@ -1,7 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 
 <head>
+    <script>
+        try {
+            if (sessionStorage.getItem('mobidocSplashDismissed') === '1') {
+                document.documentElement.classList.add('splash-dismissed');
+            }
+        } catch (e) { /* ignore */ }
+    </script>
     <meta charset="UTF-8" />
     <title>MapLibre 2D/2.5D Transition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,16 +19,23 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             background: black;
             margin: 0;
+            height: 100%;
+            overflow: hidden;
             /* font-family: 'Plus Jakarta Sans', sans-serif; */
             font-family: 'IBM Plex Sans', sans-serif;
         }
 
         #map {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
         }
 
         .buttons-tl,
@@ -108,6 +122,18 @@
             gap: 8px;
         }
 
+        .form-section-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .form-section-heading .form-section-title {
+            flex: 1;
+            min-width: 0;
+        }
+
         .form-section-title {
             font-size: 16px;
             font-weight: 600;
@@ -121,6 +147,101 @@
         .form-section-title i {
             font-size: 14px;
             opacity: 0.8;
+        }
+
+        .section-info {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .section-info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            margin: 0;
+            border: none;
+            border-radius: 6px;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            color: rgba(255, 255, 255, 0.62) !important;
+            cursor: pointer;
+            box-shadow: none !important;
+        }
+
+        .section-info-btn:hover {
+            color: rgba(255, 255, 255, 0.95) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .section-info-btn:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.45);
+            outline-offset: 2px;
+            color: #fff !important;
+        }
+
+        .section-info-btn i {
+            font-size: 15px;
+            opacity: 1;
+            pointer-events: none;
+        }
+
+        .section-info-tip {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: max-content;
+            max-width: min(292px, calc(100vw - 40px));
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.45;
+            color: rgba(255, 255, 255, 0.96);
+            background: rgba(42, 42, 44, 0.98);
+            border-radius: 8px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+            z-index: 10050;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+            pointer-events: none;
+            overflow-wrap: break-word;
+        }
+
+        /* Inset from panel edges (tooltip anchored to full heading row, not only the icon) */
+        #param-form .form-section-heading .section-info-tip {
+            left: 12px;
+            right: auto;
+            max-width: min(292px, calc(100% - 24px));
+        }
+
+        .section-info-tip strong {
+            font-weight: 600;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+
+            #param-form .form-section-heading:has(.section-info:hover) .section-info-tip,
+            #param-form .form-section-heading:has(.section-info-btn:focus-visible) .section-info-tip {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+        }
+
+        #param-form .form-section-heading:has(.section-info.is-open) .section-info-tip {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .section-info-tip {
+                transition: none;
+            }
         }
 
         .tab-bar {
@@ -156,11 +277,20 @@
             font-weight: 500;
         }
 
-        .switch-container {
+        .switch-row {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin: 2px 0;
+        }
+
+        .switch-row .switch-caption {
+            margin-top: 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.88);
+            line-height: 1.35;
+            flex: 1;
+            min-width: 0;
         }
 
         .switch {
@@ -206,19 +336,6 @@
 
         input:checked+.slider:before {
             transform: translateX(26px);
-        }
-
-        .switch-label {
-            font-size: 16px;
-            font-weight: 500;
-            color: white;
-        }
-
-        .switch-caption {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 4px;
-            /* font-style: italic; */
         }
 
         p {
@@ -344,6 +461,7 @@
                 border-radius: 16px 16px 0 0;
                 padding: 48px 20px 20px;
                 max-height: 80vh;
+                overflow-x: hidden;
                 overflow-y: auto;
                 transform: translateY(calc(100% - 48px));
                 transition: transform 0.3s ease;
@@ -420,10 +538,468 @@
                 width: 250px;
             }
         }
+
+        .param-form-footer {
+            margin: 16px 0 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 12px 20px;
+            text-align: center;
+        }
+
+        .param-form-footer-btn {
+            display: inline-block;
+            width: auto;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+            border: none;
+            border-radius: 0;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none !important;
+            color: rgba(255, 255, 255, 0.72) !important;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.4;
+            text-align: center;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            cursor: pointer;
+            vertical-align: baseline;
+        }
+
+        .param-form-footer-btn:hover {
+            color: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        .param-form-footer-btn:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.45);
+            outline-offset: 3px;
+            border-radius: 2px;
+        }
+
+        /* Welcome splash */
+        #splash-overlay,
+        #data-info-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: opacity 0.28s ease, visibility 0.28s ease;
+        }
+
+        #splash-overlay {
+            z-index: 10001;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #data-info-overlay {
+            z-index: 10002;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        #data-info-overlay.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        html.splash-dismissed #splash-overlay {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            #splash-overlay,
+            #data-info-overlay {
+                transition: none;
+            }
+        }
+
+        .splash-panel {
+            box-sizing: border-box;
+            width: 100%;
+            max-height: min(90vh, 720px);
+            overflow-y: auto;
+            padding: 32px 36px 36px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            line-height: 1.55;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            background: rgba(46, 46, 46, 0.97);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+        }
+
+        .splash-panel h1 {
+            margin: 0 0 26px;
+            font-size: 1.45rem;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .splash-panel p {
+            margin: 0 0 20px;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .splash-panel p:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .splash-disclaimer {
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            border-left: 3px solid rgba(255, 255, 255, 0.25);
+            padding-left: 14px;
+            margin-bottom: 24px !important;
+        }
+
+        .splash-panel a {
+            color: #9fd4ff;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .splash-panel a:hover {
+            color: #c8e7ff;
+        }
+
+        .splash-panel-link {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .splash-shell {
+            position: relative;
+            box-sizing: border-box;
+            width: min(calc(560px + 36px * 2), 100%);
+            flex: 0 1 auto;
+            min-width: 0;
+        }
+
+        #splash-continue {
+            display: block;
+            margin-top: 24px;
+            margin-left: auto;
+            margin-right: auto;
+            width: fit-content;
+            max-width: 100%;
+            padding: 14px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            color: #222 !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none;
+        }
+
+        #splash-continue:hover {
+            background: #fff !important;
+            color: #222 !important;
+        }
+
+        #splash-continue:focus-visible {
+            outline: 2px solid rgba(159, 212, 255, 0.9);
+            outline-offset: 3px;
+        }
+
+        .data-info-panel {
+            position: relative;
+            padding-top: 44px;
+        }
+
+        .data-info-close-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 2;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            margin: 0;
+            border: none;
+            border-radius: 8px;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none !important;
+            color: rgba(255, 255, 255, 0.82) !important;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .data-info-close-btn:hover {
+            color: #fff !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .data-info-close-btn:focus-visible {
+            outline: 2px solid rgba(159, 212, 255, 0.9);
+            outline-offset: 2px;
+        }
+
+        .data-info-close-btn i {
+            font-size: 18px;
+            pointer-events: none;
+        }
+
+        .data-info-panel h1 {
+            padding-right: 48px;
+        }
+
+        .splash-scroll-indicator {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 52px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 12px;
+            pointer-events: none;
+            border-radius: 0 0 12px 12px;
+            background: linear-gradient(to top,
+                    rgba(46, 46, 46, 0.97) 25%,
+                    rgba(46, 46, 46, 0) 100%);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.22s ease, visibility 0.22s ease;
+        }
+
+        .splash-scroll-indicator.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .splash-scroll-indicator i {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.65);
+            animation: splash-scroll-nudge 1.35s ease-in-out infinite;
+        }
+
+        @keyframes splash-scroll-nudge {
+
+            0%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.65;
+            }
+
+            50% {
+                transform: translateY(5px);
+                opacity: 1;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .splash-scroll-indicator i {
+                animation: none;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .splash-shell {
+                width: min(calc(560px + 24px * 2), 100%);
+            }
+
+            .splash-panel {
+                padding: 26px 24px 28px;
+                font-size: 15px;
+            }
+
+            .splash-panel h1 {
+                font-size: 1.25rem;
+            }
+
+            .data-info-panel {
+                padding-top: 40px;
+            }
+
+            .data-info-close-btn {
+                top: 10px;
+                right: 10px;
+                width: 36px;
+                height: 36px;
+            }
+
+            .data-info-close-btn i {
+                font-size: 16px;
+            }
+
+            .data-info-panel h1 {
+                padding-right: 42px;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <div id="splash-overlay" role="dialog" aria-modal="true" aria-labelledby="splash-title">
+        <div class="splash-shell">
+            <div class="splash-panel" id="splash-scroll-area">
+                <h1 id="splash-title">Willkommen beim MobiDoc-Demonstrator!</h1>
+                <p>Der Demonstrator zeigt modellierte Erreichbarkeiten von Arztstandorten in Form von Fahrzeiten in Minuten.
+                    Für verschiedene Fachrichtungen können Erreichbarkeiten in Hamburg und Lüchow-Dannenberg sowie die
+                    mögliche Schwankung dieser Werte dargestellt werden.</p>
+                <p class="splash-disclaimer">Bitte beachten: Die Anwendung bietet keine individuelle Auskunft für
+                    Patient*innen zu konkreten Fahrtzeiten, sondern kann als ein Kriterium für die Einschätzung regionaler
+                    Unterschiede in der Versorgung dienen.</p>
+                <p>Der Demonstrator und die zugrundeliegenden Daten sind im Projekt MobiDoc (<a
+                        href="https://www.bmv.de/SharedDocs/DE/Artikel/mFUND/Projekte/mobidoc.html" target="_blank"
+                        rel="noopener noreferrer">Erweiterte raumzeitliche Modellierung und Simulation zur Erreichbarkeit
+                        medizinischer Einrichtungen</a>) entstanden, das sich mit der erweiterten Analyse der Erreichbarkeit
+                    medizinischer Versorgung befasst hat. Ziel des Projekts war es, räumliche und zeitliche Unterschiede in der
+                    Erreichbarkeit von Arztstandorten besser abzuschätzen und sichtbar zu machen. Dazu wurden Fahrzeiten
+                    modelliert, Unsicherheiten in den zugrunde liegenden Daten berücksichtigt und nutzerorientierte
+                    Visualisierungen entwickelt und evaluiert.</p>
+                <button type="button" id="splash-continue">Weiter</button>
+            </div>
+            <div class="splash-scroll-indicator" id="splash-scroll-indicator" aria-hidden="true">
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            function dismissSplash() {
+                document.documentElement.classList.add('splash-dismissed');
+                try {
+                    sessionStorage.setItem('mobidocSplashDismissed', '1');
+                } catch (e) { /* ignore */ }
+                var overlay = document.getElementById('splash-overlay');
+                if (overlay) overlay.setAttribute('aria-hidden', 'true');
+            }
+
+            function updateSplashScrollHint() {
+                var panel = document.getElementById('splash-scroll-area');
+                var hint = document.getElementById('splash-scroll-indicator');
+                if (!panel || !hint) return;
+                if (document.documentElement.classList.contains('splash-dismissed')) {
+                    hint.classList.remove('is-visible');
+                    return;
+                }
+                var slack = 8;
+                var canScrollDown = panel.scrollHeight > panel.clientHeight + slack;
+                var atBottom = panel.scrollTop >= panel.scrollHeight - panel.clientHeight - slack;
+                hint.classList.toggle('is-visible', canScrollDown && !atBottom);
+            }
+
+            function replaySplash() {
+                document.documentElement.classList.remove('splash-dismissed');
+                var splashOv = document.getElementById('splash-overlay');
+                if (splashOv) splashOv.setAttribute('aria-hidden', 'false');
+
+                var dataOv = document.getElementById('data-info-overlay');
+                if (dataOv && dataOv.classList.contains('is-open')) {
+                    dataOv.classList.remove('is-open');
+                    dataOv.setAttribute('aria-hidden', 'true');
+                }
+
+                document.querySelectorAll('#param-form .section-info.is-open').forEach(function (wrap) {
+                    wrap.classList.remove('is-open');
+                    var b = wrap.querySelector('.section-info-btn');
+                    if (b) b.setAttribute('aria-expanded', 'false');
+                });
+
+                var area = document.getElementById('splash-scroll-area');
+                if (area) area.scrollTop = 0;
+                updateSplashScrollHint();
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        updateSplashScrollHint();
+                        var wb = document.getElementById('splash-continue');
+                        if (wb) wb.focus({ preventScroll: true });
+                    });
+                });
+            }
+
+            function attachSplashReplayBtn() {
+                var replayBtn = document.getElementById('splashReplayBtn');
+                if (!replayBtn) return;
+                replayBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    replaySplash();
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', attachSplashReplayBtn);
+            } else {
+                attachSplashReplayBtn();
+            }
+
+            var btn = document.getElementById('splash-continue');
+            if (btn) btn.addEventListener('click', dismissSplash);
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !document.documentElement.classList.contains('splash-dismissed')) {
+                    dismissSplash();
+                }
+            });
+
+            var scrollArea = document.getElementById('splash-scroll-area');
+            if (scrollArea) {
+                scrollArea.addEventListener('scroll', updateSplashScrollHint, { passive: true });
+                if (typeof ResizeObserver !== 'undefined') {
+                    var ro = new ResizeObserver(updateSplashScrollHint);
+                    ro.observe(scrollArea);
+                }
+            }
+            window.addEventListener('resize', updateSplashScrollHint);
+
+            if (!document.documentElement.classList.contains('splash-dismissed')) {
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        var area = document.getElementById('splash-scroll-area');
+                        if (area) area.scrollTop = 0;
+                        updateSplashScrollHint();
+                        var b = document.getElementById('splash-continue');
+                        if (b) b.focus({ preventScroll: true });
+                    });
+                });
+            } else {
+                var overlayDone = document.getElementById('splash-overlay');
+                if (overlayDone) overlayDone.setAttribute('aria-hidden', 'true');
+            }
+        })();
+    </script>
+
+    <div id="data-info-overlay" role="dialog" aria-modal="true" aria-labelledby="data-info-title" aria-hidden="true">
+        <div class="splash-shell">
+            <div class="splash-panel data-info-panel" id="data-info-scroll-area">
+                <button type="button" id="data-info-close" class="data-info-close-btn" aria-label="Schließen">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+                <h1 id="data-info-title">Information zu den Daten</h1>
+                <p>Die dargestellten Erreichbarkeiten beruhen auf modellierten Fahrzeiten zu Arztstandorten. Grundlagen sind ein manuell zusammengestellter Datensatz zu Arztstandorten, OpenStreetMap-Straßennetzdaten sowie GTFS-Daten (DELFI). Ausgangspunkte der Analyse sind 100-m-Gitterzellen des Zensus 2022, deren Bevölkerungszahl in die Berechnungen einfließt. Die Berechnungen wurden in Python mit r5py durchgeführt. Angezeigt werden mittlere modellierte Fahrzeiten sowie optional wahrscheinliche Schwankungsbereiche. (Berechnung: g2lab, HafenCity Universität Hamburg <a id="data-info-external-link" class="splash-panel-link" href="https://www.geomatik-hamburg.de/g2lab/" target="_blank"                     rel="noopener noreferrer">http://www.geomatik-hamburg.de/g2lab/</a>)</p>
+            </div>
+        </div>
+    </div>
+
     <div class="buttons-tl">
         <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
     </div>
@@ -433,14 +1009,34 @@
         <form id="paramForm">
             <div class="form-container">
                 <div class="form-section">
-                    <h3 class="form-section-title"><i class="fas fa-map-marker-alt"></i> Ort</h3>
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-map-marker-alt"></i> Region</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Region"
+                                aria-expanded="false" aria-controls="tip-section-ort">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-ort" role="tooltip">
+                            Wählen Sie die Region aus, für die Daten angezeigt werden sollen.</div>
+                    </div>
                     <div class="tab-bar" data-group="data">
                         <button type="button" class="tab-button" data-value="h">Hamburg</button>
                         <button type="button" class="tab-button" data-value="l">Lüchow</button>
                     </div>
                 </div>
                 <div class="form-section">
-                    <h3 class="form-section-title"><i class="fas fa-user-doctor"></i> Fachrichtung</h3>
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-user-doctor"></i> Fachrichtung</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Fachrichtung"
+                                aria-expanded="false" aria-controls="tip-section-specialty">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-specialty" role="tooltip">
+                            Wählen Sie die Fachrichtung aus, deren Erreichbarkeit dargestellt werden soll.</div>
+                    </div>
                     <select id="specialtySelect">
                         <option value="hausaerzteErwachsene">Hausärzte (Erwachsene)</option>
                         <option value="hausaerzteKinder">Hausärzte (Kinder)</option>
@@ -463,14 +1059,34 @@
                     </select>
                 </div>
                 <div class="form-section">
-                    <h3 class="form-section-title"><i class="fas fa-chart-simple"></i> Erreichbarkeitswerte</h3>
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-chart-simple"></i> Erreichbarkeitswerte</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Erreichbarkeitswerte"
+                                aria-expanded="false" aria-controls="tip-section-values">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-values" role="tooltip">
+                            Legen Sie fest, ob nur Mittelwerte oder zusätzlich auch Minima und Maxima angezeigt werden.</div>
+                    </div>
                     <div class="tab-bar" data-group="values">
                         <button type="button" class="tab-button" data-value="nowNom">Mittelwerte</button>
                         <button type="button" class="tab-button" data-value="nowMinMax">Minima/Maxima</button>
                     </div>
                 </div>
                 <div class="form-section">
-                    <h3 class="form-section-title"><i class="fas fa-arrow-trend-up"></i> Zukunftsszenario</h3>
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-arrow-trend-up"></i> Zukunftsszenario</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Zukunftsszenario"
+                                aria-expanded="false" aria-controls="tip-section-prognosis">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-prognosis" role="tooltip">
+                            Zeigen Sie die Erreichbarkeit für Szenarien mit 10&nbsp;% oder 20&nbsp;% weniger Fachärzt*innen.</div>
+                    </div>
                     <div class="tab-bar" data-group="prognosis">
                         <button type="button" class="tab-button" data-value="off">Off</button>
                         <button type="button" class="tab-button" data-value="progNom10">-10%</button>
@@ -478,19 +1094,91 @@
                     </div>
                 </div>
                 <div class="form-section">
-                    <div class="switch-container">
-                        <span class="switch-label"><i class="fas fa-users-viewfinder"></i> Gewichtet nach
-                            Bevölkerung</span>
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-users-viewfinder"></i> Gewichtet nach Bevölkerung</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Gewichtet nach Bevölkerung"
+                                aria-expanded="false" aria-controls="tip-section-weighted">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-weighted" role="tooltip">
+                            Berücksichtigt die Anzahl der Bewohner*innen je Zelle bei der Auswertung der Fahrtzeiten.</div>
+                    </div>
+                    <div class="switch-row">
                         <label class="switch">
                             <input type="checkbox" id="weightedSwitch">
                             <span class="slider"></span>
                         </label>
+                        <span class="switch-caption" id="weightedCaption">Zeit in Minuten</span>
                     </div>
-                    <div class="switch-caption" id="weightedCaption">Zeit in Minuten</div>
                 </div>
             </div>
         </form>
+        <p class="param-form-footer">
+            <button type="button" class="param-form-footer-btn" id="splashReplayBtn"
+                aria-haspopup="dialog" aria-controls="splash-overlay">Über den Demonstrator</button>
+            <button type="button" class="param-form-footer-btn" id="dataInfoOpenBtn"
+                aria-haspopup="dialog" aria-controls="data-info-overlay">Über die Daten</button>
+        </p>
     </div>
+
+    <script>
+        (function () {
+            var overlay = document.getElementById('data-info-overlay');
+            var openBtn = document.getElementById('dataInfoOpenBtn');
+            var closeBtn = document.getElementById('data-info-close');
+            if (!overlay || !openBtn || !closeBtn) return;
+
+            function closeAllFormTips() {
+                document.querySelectorAll('#param-form .section-info.is-open').forEach(function (wrap) {
+                    wrap.classList.remove('is-open');
+                    var b = wrap.querySelector('.section-info-btn');
+                    if (b) b.setAttribute('aria-expanded', 'false');
+                });
+            }
+
+            function openDataInfo() {
+                closeAllFormTips();
+                overlay.classList.add('is-open');
+                overlay.setAttribute('aria-hidden', 'false');
+                var area = document.getElementById('data-info-scroll-area');
+                if (area) area.scrollTop = 0;
+                closeBtn.focus({ preventScroll: true });
+            }
+
+            function closeDataInfo() {
+                overlay.classList.remove('is-open');
+                overlay.setAttribute('aria-hidden', 'true');
+                openBtn.focus({ preventScroll: true });
+            }
+
+            openBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openDataInfo();
+            });
+            closeBtn.addEventListener('click', closeDataInfo);
+            overlay.addEventListener('click', function (e) {
+                var panel = overlay.querySelector('.splash-panel');
+                if (panel && panel.contains(e.target)) return;
+                closeDataInfo();
+            });
+
+            var externalLink = document.getElementById('data-info-external-link');
+            if (externalLink) {
+                externalLink.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            }
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'Escape' || !overlay.classList.contains('is-open')) return;
+                closeDataInfo();
+                e.preventDefault();
+                e.stopPropagation();
+            }, true);
+        })();
+    </script>
 
     <div id="legend-container">
         <div class="legend-title">Erreichbarkeit</div>
@@ -692,6 +1380,46 @@
                 // Initial position
                 updateLegendPosition();
             }
+
+            (function initSectionInfoTips() {
+                var tapToggle = window.matchMedia('(hover: none)').matches;
+
+                function closeAllSectionTips() {
+                    document.querySelectorAll('#param-form .section-info.is-open').forEach(function (wrap) {
+                        wrap.classList.remove('is-open');
+                        var b = wrap.querySelector('.section-info-btn');
+                        if (b) b.setAttribute('aria-expanded', 'false');
+                    });
+                }
+
+                document.querySelectorAll('#param-form .section-info').forEach(function (info) {
+                    var btn = info.querySelector('.section-info-btn');
+                    if (!btn) return;
+                    btn.addEventListener('click', function (e) {
+                        if (!tapToggle) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var willOpen = !info.classList.contains('is-open');
+                        closeAllSectionTips();
+                        if (willOpen) {
+                            info.classList.add('is-open');
+                            btn.setAttribute('aria-expanded', 'true');
+                        }
+                    });
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!tapToggle) return;
+                    if (!e.target.closest('#param-form .section-info') &&
+                        !e.target.closest('#param-form .section-info-tip')) {
+                        closeAllSectionTips();
+                    }
+                }, true);
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') closeAllSectionTips();
+                });
+            })();
 
             // Handle specialty select
             const specialtySelect = document.getElementById('specialtySelect');
@@ -948,7 +1676,7 @@
         function updateWeightedCaption(isWeighted) {
             const caption = document.getElementById('weightedCaption');
             if (caption) {
-                caption.textContent = isWeighted ? 'Zeit in Minuten, gewichtet nach Bevölkerung' : 'Zeit in Minuten';
+                caption.textContent = isWeighted ? 'Zeit gewichtet nach Bevölkerung' : 'Zeit in Minuten';
             }
         }
 
