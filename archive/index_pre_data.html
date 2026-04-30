@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>MapLibre 2D/2.5D Transition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; }
+        #map { width: 100vw; height: 100vh; }
+        .buttons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        button {
+            padding: 12px 16px;
+            font-size: 20px;
+            border: none;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="buttons">
+        <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+    </div>
+    <div id="map"></div>
+
+    <script src="tokens.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script>
+        const searchParams = new URLSearchParams(window.location.search);
+
+        const gridSize = searchParams.has('grid') ? parseInt(searchParams.get('grid')) : 100;
+        const verticesCount = 6;
+        const center = [10, 53.55];
+        const gapInMeters = 1000;
+        const radiusInMeters = gapInMeters * 0.25;
+        const earthRadius = 6371000;
+
+        const latRadiusInDegrees = radiusInMeters / earthRadius * (180 / Math.PI);
+        const lonRadiusInDegrees = radiusInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+        const latGapInDegrees = gapInMeters / earthRadius * (180 / Math.PI);
+        const lonGapInDegrees = gapInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            // Phase 1: Use hosted MapTiler tiles (switch key below)
+            style: 'https://api.maptiler.com/maps/basic-v2-dark/style.json?key=' + MAPTILER_KEY,
+            // Phase 2: TODO: switch to local tileserver e.g., 'http://localhost:8080/styles/basic/style.json'
+            center: center,
+            zoom: 10,
+            pitch: 0,
+            bearing: 0
+        });
+
+        const MapState = { in2D: 1, in3D: 2, animating: 4 };
+        let mapState = MapState.in2D;
+
+        const cellData = [];
+        for (let i = -gridSize / 2; i < gridSize / 2; i++) {
+            for (let j = -gridSize / 2; j < gridSize / 2; j++) {
+                const lat = center[1] + (i * latGapInDegrees);
+                const lon = center[0] + (j * lonGapInDegrees);
+                const value = Math.floor(Math.random() * 800);
+                const confidence = Math.random();
+                cellData.push({ lat, lon, value, confidence });
+            }
+        }
+
+        const valueToColor = (value, confidence) => {
+            const luminance = 100 - confidence * 50;
+            return `hsl(220, 100%, ${luminance}%)`;
+        };
+
+        const generateCirclePolygon = (centerLon, centerLat) => {
+            const points = [];
+            for (let i = 0; i < verticesCount; i++) {
+                const angle = (i / verticesCount) * 2 * Math.PI;
+                const dLat = latRadiusInDegrees * Math.sin(angle);
+                const dLon = lonRadiusInDegrees * Math.cos(angle);
+                points.push([centerLon + dLon, centerLat + dLat]);
+            }
+            // Close the polygon by repeating the first point
+            points.push(points[0]);
+            return points;
+        };
+
+        map.on('load', () => {
+            const features = cellData.map((d, idx) => ({
+                type: 'Feature',
+                id: idx,
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [generateCirclePolygon(d.lon, d.lat)]
+                },
+                properties: {
+                    baseHeight: 0,
+                    targetHeight: d.value,
+                    currentHeight: 0,
+                    color: valueToColor(d.value, d.confidence),
+                    opacity: 0.85
+                }
+            }));
+
+            map.addSource('cells', {
+                type: 'geojson',
+                data: { type: 'FeatureCollection', features }
+            });
+
+            map.addLayer({
+                id: 'extruded-layer',
+                type: 'fill-extrusion',
+                source: 'cells',
+                paint: {
+                    'fill-extrusion-color': ['get', 'color'],
+                    'fill-extrusion-height': ['feature-state', 'height'],
+                    'fill-extrusion-base': 0
+                }
+            });
+        });
+
+        map.on('pitchend', () => {
+            const pitch = map.getPitch();
+            if (mapState !== MapState.animating) {
+                if (pitch === 0 && mapState !== MapState.in2D) animateExtrusion(false);
+                else if (pitch > 0 && mapState !== MapState.in3D) animateExtrusion(true);
+            }
+        });
+
+        function animateExtrusion(to3D = false, duration = 500) {
+            const source = map.getSource('cells');
+            const features = source._data.features;
+            const start = performance.now();
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+
+                for (const f of features) {
+                    const newHeight = eased * (to3D ? f.properties.targetHeight : 0);
+                    map.setFeatureState({ source: 'cells', id: f.id }, { height: newHeight });
+                }
+
+                if (t < 1) requestAnimationFrame(frame);
+                else {
+                    mapState = to3D ? MapState.in3D : MapState.in2D;
+                    setButtonText(to3D ? '2D' : '3D');
+                }
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        function animateMapPitch(to3D = false, duration = 1500) {
+            const start = performance.now();
+            const pitchStart = map.getPitch();
+            const pitchEnd = to3D ? 60 : 0;
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+                map.setPitch(pitchStart + (pitchEnd - pitchStart) * eased);
+
+                if (t < 1) requestAnimationFrame(frame);
+                else animateExtrusion(to3D);
+            }
+
+            mapState = MapState.animating;
+            requestAnimationFrame(frame);
+        }
+
+        function pitchButtonPressed() {
+            setButtonText('…');
+            animateMapPitch(map.getPitch() === 0);
+        }
+
+        function setButtonText(text = '3D') {
+            document.querySelector('#pitchButton').innerHTML = text;
+        }
+    </script>
+</body>
+</html>

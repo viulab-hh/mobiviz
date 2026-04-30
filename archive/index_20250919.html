@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>MapLibre 2D/2.5D Transition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <!-- Fonts -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans&display=swap" rel="stylesheet"> -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: black;
+            margin: 0;
+            /* font-family: 'Plus Jakarta Sans', sans-serif; */
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .buttons-tl, #param-form {
+            position: absolute;
+            left: 20px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .buttons-tl {
+            top: 20px;
+        }
+
+        #param-form {
+            bottom: 20px;
+            /* background: white; */
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+
+        button {
+            padding: 12px 16px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 20px;
+            border: none;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button, #param-form, .maplibregl-ctrl {
+            color: white; backdrop-filter: blur(24px); background: rgba(20, 20, 25, 0.4);
+        }
+
+        .mapboxgl-ctrl-top-right .mapboxgl-ctrl,
+        .mapboxgl-ctrl-top-left .mapboxgl-ctrl,
+        .mapboxgl-ctrl-bottom-left .mapboxgl-ctrl,
+        .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
+            margin: 20px;
+        }
+
+        .mapboxgl-ctrl-group button+button {
+            border-top: 0px;
+            color: #fff !important;
+        }
+        
+        button.mapboxgl-ctrl-zoom-in span.maplibregl-ctrl-icon {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23fff'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5z'/%3E%3C/svg%3E") !important;
+        }
+
+        button.mapboxgl-ctrl-zoom-out span.maplibregl-ctrl-icon {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23fff'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-9z'/%3E%3C/svg%3E") !important;
+        }
+
+        button.mapboxgl-ctrl-compass span.maplibregl-ctrl-icon {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23da5550'%3E%3Cpath d='m10.5 14 4-8 4 8h-8z'/%3E%3Cpath d='m10.5 16 4 8 4-8h-8z' fill='%23ddd'/%3E%3C/svg%3E") !important;
+        }
+
+        label {
+            display: block;
+        }
+
+        .form-container {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-col {
+            flex: 1;
+            width: 120px;
+            line-height: 15px;
+        }
+
+        p {
+            margin-block: 4px;
+        }
+        
+    </style>
+</head>
+
+<body>
+    <div class="buttons-tl">
+            <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+    </div>
+
+    <div id="param-form">
+        <form id="paramForm">
+            <div class="form-container">
+                <div class="form-col">
+                    <p>
+                        <strong>Data</strong><br><br>
+                        <label><input type="radio" name="data" value="h" checked> Hamburg</label><br>
+                        <label><input type="radio" name="data" value="l"> Lüchow</label>
+                    </p>
+                </div>
+                <div class="form-col">
+                    <p>
+                        <strong>Mode</strong><br><br>
+                        <label><input type="radio" name="mode" value="a" checked> Absolute</label><br>
+                        <label><input type="radio" name="mode" value="r"> Relative</label><br>
+                        <label><input type="radio" name="mode" value="p"> Prognosis</label>
+                    </p>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+    // JavaScript
+    document.getElementById('paramForm').addEventListener('change', function (e) {
+        if (e.target.name === 'data') {
+            const selectedMode = e.target.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('data', selectedMode); // update the search param
+            window.location.href = url.toString(); // reload page with new param
+        }
+        else if (e.target.name === 'mode') {
+            const selectedMode = e.target.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('mode', selectedMode); // update the search param
+            window.location.href = url.toString(); // reload page with new param
+        }
+    });
+
+    // Optional: Pre-select the radio button based on current mode in URL
+    window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+
+        const currentData = params.get('data');
+        if (currentData) {
+            const radio = document.querySelector(`input[name="data"][value="${currentData}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        const currentMode = params.get('mode');
+        if (currentMode) {
+            const radio = document.querySelector(`input[name="mode"][value="${currentMode}"]`);
+            if (radio) radio.checked = true;
+        }
+    });
+</script>
+
+    <div id="map"></div>
+
+    <script src="tokens.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script>
+        // SEARCH PARAMS
+        const searchParams = new URLSearchParams(window.location.search);
+
+        let mode = (searchParams.get('mode') || 'a').charAt(0).toLowerCase();
+        let dataParam = (searchParams.get('data') || 'h').charAt(0).toLowerCase();
+
+        const dataPath = dataParam == 'h' ?
+            // 'data/20250725/20250723-1059_osm_hamburg_weightingCautious_drive__filtered_with_abspop.geojson' :
+            // 'data/20250725/20250723-1029_osm_luechow_weightingCautious_drive__filtered_with_abspop.geojson';
+            'data/20250919/hamburg/sonstige.geojson' :
+            'data/20250919/luechow/hausaerzteErwachsene.geojson';
+
+        const binCount = parseInt(searchParams.get('bins')) || 4;
+
+        // SEARCH PARAMS
+
+
+        const prettyBreaks = dataParam == 'h' ? [2, 4, 6] : [5, 10, 15];
+
+        const verticesCount = mode == 'p' ? 4 : 12;
+        const center = dataParam === 'h' ? [10, 53.54] : [11.15, 53.05];
+        const radiusInMeters = 50;
+        const earthRadius = 6371000;
+        const extrusionFactor = mode == 'p' ? 10000 : 4000;
+
+        const latRadiusInDegrees = radiusInMeters / earthRadius * (180 / Math.PI);
+        const lonRadiusInDegrees = radiusInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://api.maptiler.com/maps/basic-v2-dark/style.json?key=' + MAPTILER_KEY,
+            center: center,
+            zoom: 10,
+            pitch: 0,
+            bearing: 0
+        });
+
+        const MapState = { in2D: 1, in3D: 2, animating: 4 };
+        let mapState = MapState.in2D;
+
+        let nav = new maplibregl.NavigationControl();
+        map.addControl(nav, 'top-right');
+
+        const interpolateColor = (value, thresholds, colorMin = [50, 165, 202], colorMax = [218, 85, 80]) => {
+            for (let i = 0; i < thresholds.length; i++) {
+                if (value <= thresholds[i]) {
+                    const t = i/thresholds.length;
+                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                    return `rgb(${r}, ${g}, ${b})`;
+                }
+            }
+            return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
+        };
+
+        const makeHexPolygon = ([centerLon, centerLat], scale = 1) => {
+            const points = [];
+            for (let i = 0.5; i < verticesCount; i++) {
+                const angle = (i / verticesCount) * 2 * Math.PI;
+                const dLat = latRadiusInDegrees * scale * Math.sin(angle);
+                const dLon = lonRadiusInDegrees * scale * Math.cos(angle);  
+                points.push([centerLon + dLon, centerLat + dLat]);
+            }
+            points.push(points[0]);
+            return points;
+        };
+
+        const properties = (prop, mode) => {
+            switch (mode) {
+                case 'a':
+                    return [prop.tMin_100pctDocs, prop.tMax_100pctDocs];
+                case 'r':
+                    return [prop.EwM_22_Min_100pctDocs, prop.EwM_22_Max_100pctDocs];
+                default:
+                    return [prop.EwM_22_Nom_100pctDocs, prop.EwM_22_40_Nom_080pctDocs_diff];
+            }
+        };
+
+        map.on('load', () => {
+            map.setLight({
+                anchor: 'viewport',
+                color: '#ffffff',
+                intensity: 0.5
+            });
+
+            fetch(dataPath)
+                .then(res => res.json())
+                .then(geojson => {
+                    let allVals = [];
+                    geojson.features.forEach(f => {
+                        // const t0 = modeAbsolute ? f.properties.t_100pctDocs_Min : f.properties.EwM_22_100pctDocs_Min;
+                        // const t1 = modeAbsolute ? f.properties.t_100pctDocs_Max : f.properties.EwM_22_100pctDocs_Max;
+                        const [t0, t1] = properties(f.properties, mode);
+                        if (typeof t0 === 'number') allVals.push(t0);
+                        if (typeof t1 === 'number') allVals.push(t1);
+                    });
+
+                    allVals.sort((a, b) => a - b);
+                    console.log(allVals[allVals.length - 1]);
+                    
+                    const quantiles = (arr, bins = binCount) => {
+                        const result = [];
+                        for (let i = 1; i < bins; i++) {
+                            result.push(arr[Math.floor(arr.length * i / bins)]);
+                        }
+                        return result;
+                    };
+                   
+                    // const combinedQuantiles = mode == 'a' ? prettyBreaks : quantiles(allVals);
+                    var combinedQuantiles = [0];
+                    switch (mode) {
+                        case 'a': combinedQuantiles = prettyBreaks; break;
+                        case 'r': combinedQuantiles = quantiles(allVals); break;
+                        default: break;
+                    }
+                    console.log(combinedQuantiles);
+
+                    const ef = extrusionFactor / allVals[allVals.length - 1];
+                    
+                    const extrusions = [];
+                    geojson.features.forEach((f, i) => {
+                        const center = f.geometry.coordinates;
+                        // const t0 = modeAbsolute ? f.properties.t_100pctDocs_Min : f.properties.EwM_22_100pctDocs_Min;
+                        // const t1 = modeAbsolute ? f.properties.t_100pctDocs_Max : f.properties.EwM_22_100pctDocs_Max;
+                        const [t0, t1] = properties(f.properties, mode);
+                        // const [t0R, t1R] = properties(f.properties, 'r');
+                        // const [pMin, pMax] = [t0R/t0, t1R/t1];
+                        
+
+                        const colorMin = interpolateColor(t0, combinedQuantiles);
+                        const colorMax = interpolateColor(t1, combinedQuantiles);
+
+                        const baseId = i * 2;
+                        const topId = i * 2 + 1;
+
+                        const outerRadius = 1;
+
+                        const outerRing = makeHexPolygon(center, outerRadius);
+                        var innerRing = makeHexPolygon(center, outerRadius/2);
+                        var baseCoordinates = [outerRing];
+                        var topCoordinates = [outerRing];
+                        var baseBaseHeight = 0;
+                        var baseTargetHeight = t0 * ef;
+                        var topBaseHeight = 0;
+                        var topTargetHeight = t1 * ef;
+
+                        switch (mode) {
+                            case 'a':
+                            case 'r':
+                                baseCoordinates = [outerRing, innerRing];
+                                topCoordinates = [innerRing];
+                                break;
+                            // case 'p':
+                            //     innerRing = makeHexPolygon(center, 0.25);    
+                            //     baseCoordinates = [outerRing, innerRing];
+                            //     topCoordinates = [innerRing];
+                            //     break;
+                            default:
+                                // if (t0 < t1) {
+                                //     baseBaseHeight = 0;
+                                //     baseTargetHeight = t0 * ef;
+                                //     topBaseHeight = t0 * ef;
+                                //     topTargetHeight = (t1 ) * ef;
+                                // }    
+                                // else {
+                                //     topBaseHeight = 0;
+                                //     topTargetHeight = t1 * ef;
+                                //     baseBaseHeight = t1 * ef;
+                                //     baseTargetHeight = (t0) * ef;
+                                // }
+
+                                topBaseHeight = 0;
+                                topTargetHeight = Math.abs(t1 - t0) * ef;
+                                
+                                // topBaseHeight = 100;
+                                // topTargetHeight = 100 + (t1 - t0) * ef;
+
+                                // if (t0 < t1) {
+                                //     topBaseHeight = t0 * ef;
+                                //     topTargetHeight = (t1) * ef;
+                                // }
+                                // else {
+                                //     topBaseHeight = 0;
+                                //     topTargetHeight = t1 * ef;
+                                // }
+                                break;
+                        }
+
+                        if (mode != 'p') {
+                            extrusions.push({
+                                type: 'Feature',
+                                id: baseId,
+                                geometry: { type: 'Polygon', coordinates: baseCoordinates },
+                                properties: {
+                                    color: colorMin,
+                                    baseHeight: baseBaseHeight,
+                                    targetHeight: baseTargetHeight
+                                }
+                            });
+                        }
+
+                        if (true) {
+                            extrusions.push({
+                                type: 'Feature',
+                                id: topId,
+                                geometry: { type: 'Polygon', coordinates: topCoordinates },
+                                properties: {
+                                    color: colorMax,
+                                    baseHeight: topBaseHeight,
+                                    targetHeight: topTargetHeight
+                                }
+                            });
+                        }
+                    });
+
+                    map.addSource('cells', {
+                        type: 'geojson',
+                        data: { type: 'FeatureCollection', features: extrusions }
+                    });
+
+                    const zoomAlpha0 = 0.5;
+                    const zoomAlphaZone = [12.25, 12.75];
+
+                    // map.addLayer({
+                    //     id: 'extruded-layer',
+                    //     type: 'fill-extrusion',
+                    //     source: 'cells',
+                    //     paint: {
+                    //         'fill-extrusion-color': ['get', 'color'],
+                    //         // 'fill-extrusion-opacity': ['get', 'opacity'],
+                    //         'fill-extrusion-height': ['coalesce', ['feature-state', 'height'], 0],
+                    //         'fill-extrusion-base': ['coalesce', ['get', 'baseHeight'], 0]
+                    //     }
+                    // });
+
+                    map.addLayer({
+                        id: 'extruded-layer-top',
+                        type: 'fill-extrusion',
+                        source: 'cells',
+                        filter: ['==', ['%', ['id'], 2], 1],
+                        paint: {
+                            'fill-extrusion-color': ['get', 'color'],
+                            'fill-extrusion-opacity': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                zoomAlphaZone[0], zoomAlpha0,
+                                zoomAlphaZone[1], 1
+                            ],
+                            'fill-extrusion-height': ['coalesce', ['feature-state', 'height'], 0],
+                            'fill-extrusion-base': ['coalesce', ['get', 'baseHeight'], 0]
+                        }
+                    });
+                    
+
+
+                    // var opacity = 0;
+                    // switch (mode) {
+                    //     case 'a':
+                    //     case 'r':
+                    //         opacity = 1; break;
+                    //     case 'p':
+                    //         opacity = 0.7; break;
+                    //     default:
+                    //         opacity = 0.4; break;
+                    // }
+                    const opacity = mode == 'p' ? 0.7 : 1;
+
+                    map.addLayer({
+                        id: 'extruded-layer-base',
+                        type: 'fill-extrusion',
+                        source: 'cells',
+                        filter: ['==', ['%', ['id'], 2], 0],
+                        paint: {
+                            'fill-extrusion-color': ['get', 'color'],
+                            'fill-extrusion-opacity': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                zoomAlphaZone[0], zoomAlpha0,
+                                zoomAlphaZone[1], opacity
+                            ],
+                            'fill-extrusion-height': ['coalesce', ['feature-state', 'height'], 0],
+                            'fill-extrusion-base': ['coalesce', ['get', 'baseHeight'], 0]
+                        }
+                    });
+
+                    extrusions.forEach(f =>
+                        map.setFeatureState({ source: 'cells', id: f.id }, { height: 0 })
+                    );
+                });
+        });
+
+        map.on('pitchend', () => {
+            const pitch = map.getPitch();
+            if (mapState !== MapState.animating) {
+                if (pitch === 0 && mapState !== MapState.in2D) animateExtrusion(false);
+                else if (pitch > 0 && mapState !== MapState.in3D) animateExtrusion(true);
+            }
+        });
+
+        function animateExtrusion(to3D = false, duration = 500) {
+            const source = map.getSource('cells');
+            const features = source._data.features;
+            const start = performance.now();
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+
+                for (const f of features) {
+                    const newHeight = eased * (to3D ? f.properties.targetHeight : 0);
+                    map.setFeatureState({ source: 'cells', id: f.id }, { height: newHeight });
+                }
+
+                if (t < 1) requestAnimationFrame(frame);
+                else {
+                    mapState = to3D ? MapState.in3D : MapState.in2D;
+                    setButtonText(to3D ? '2D' : '3D');
+                }
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        function animateMapPitch(to3D = false, duration = 1500) {
+            const start = performance.now();
+            const pitchStart = map.getPitch();
+            const pitchEnd = to3D ? 60 : 0;
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+                map.setPitch(pitchStart + (pitchEnd - pitchStart) * eased);
+
+                if (t < 1) requestAnimationFrame(frame);
+                else animateExtrusion(to3D);
+            }
+
+            mapState = MapState.animating;
+            requestAnimationFrame(frame);
+        }
+
+        function pitchButtonPressed() {
+            setButtonText('…');
+            animateMapPitch(map.getPitch() === 0);
+        }
+
+        function setButtonText(text = '3D') {
+            document.querySelector('#pitchButton').innerHTML = text;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Mapbox 2D/2.5D Transition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.css" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .buttons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 16px;
+            font-size: 20px;
+            border: none;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="buttons">
+        <!-- <button onclick="animateMapPitch(false)">Switch to 2D</button> -->
+        <!-- <button onclick="animateMapPitch(true)">Switch to 2.5D</button> -->
+        <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+    </div>
+    <div id="map"></div>
+
+    <script src="tokens.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.11.0/mapbox-gl.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script> -->
+    <script src="lib/anime.iife.min.js"></script>
+    <script>
+        mapboxgl.accessToken = MAPBOX_TOKEN;
+
+        const searchParams = new URLSearchParams(window.location.search);
+
+        const gridSize = searchParams.has('grid') ? parseInt(searchParams.get('grid')) : 100;
+        const verticesCount = searchParams.has('vertices') ? parseInt(searchParams.get('vertices')) : 6;
+        const center = [10, 53.55];
+        const gapInMeters = 1000;
+        const radiusInMeters = gapInMeters * 0.25;
+
+        const earthRadius = 6371000; // Earth's radius in meters
+
+        // Convert radius from meters to degrees of latitude and longitude
+        const latRadiusInDegrees = radiusInMeters / earthRadius * (180 / Math.PI);
+        const lonRadiusInDegrees = radiusInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+
+        // Convert gapInMeters to degrees of latitude and longitude
+        const latGapInDegrees = gapInMeters / earthRadius * (180 / Math.PI);
+
+        // Adjust for longitude gap: longitude distance varies with latitude
+        const lonGapInDegrees = gapInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/dark-v11',
+            center: center,
+            zoom: 10,
+            pitch: 0,
+            bearing: 0
+        });
+
+        const MapState = {
+            in2D: 1,
+            in3D: 2,
+            animating: 4
+        };
+        let mapState = MapState.in2D;
+
+        const cellData = [];
+        for (let i = -gridSize / 2; i < gridSize / 2; i++) {
+            for (let j = -gridSize / 2; j < gridSize / 2; j++) {
+                // const lat = center[1] + i * 0.005;
+                // const lon = center[0] + j * 0.005;
+                const lat = center[1] + (i * latGapInDegrees);
+                const lon = center[0] + (j * lonGapInDegrees);
+                const value = Math.floor(Math.random() * 800);
+                const confidence = Math.random();
+                cellData.push({ lat, lon, value, confidence });
+            }
+        }
+
+        const valueToColor = (value, confidence) => {
+            const luminance = 100 - confidence * 50; // 100% white to 50% blue
+            return `hsl(220, 100%, ${luminance}%)`;
+        };
+
+
+
+        const generateCirclePolygon = (centerLon, centerLat) => {
+            const points = [];
+
+            for (let i = 0; i < verticesCount; i++) {
+                const angle = (i / verticesCount) * 2 * Math.PI; // angle in radians
+                const dLat = latRadiusInDegrees * Math.sin(angle);
+                const dLon = lonRadiusInDegrees * Math.cos(angle);
+
+                const lat = centerLat + dLat;
+                const lon = centerLon + dLon;
+
+                points.push([lon, lat]);
+            }
+
+            return points;
+        };
+
+
+        map.on('load', () => {
+            const features = cellData.map(d => ({
+                type: 'Feature',
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [generateCirclePolygon(d.lon, d.lat)]
+                },
+                properties: {
+                    baseHeight: 0,
+                    targetHeight: d.value,
+                    currentHeight: 0,
+                    color: valueToColor(d.value, d.confidence),
+                    opacity: 0.85
+                }
+            }));
+
+            map.addSource('cells', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features
+                }
+            });
+
+            map.addLayer({
+                id: 'extruded-layer',
+                type: 'fill-extrusion',
+                source: 'cells',
+                paint: {
+                    'fill-extrusion-color': ['get', 'color'],
+                    'fill-extrusion-height': ['get', 'currentHeight'],
+                    'fill-extrusion-base': 0/*,
+          'fill-extrusion-opacity': ['get', 'opacity']*/
+                }
+            });
+        });
+
+        map.on('pitchend', () => {
+            const pitch = map.getPitch();
+
+            if (mapState !== MapState.animating) {
+                // Check if the pitch has changed from 0 to >0 or >0 back to 0
+                if (pitch === 0 && mapState !== MapState.in2D) {
+                    // Transition to 2D (flat view)
+                    animateExtrusion(false);
+                } else if (pitch > 0 && mapState !== MapState.in3D) {
+                    // Transition to 2.5D (extruded view)
+                    animateExtrusion(true);
+                }
+            }
+        });
+       
+
+        function animateMapPitch(to3D = false, duration = 1500) {
+            const startPitch = map.getPitch();
+            const target = { t: startPitch };
+            const from3D = startPitch > 0;
+
+            anime.animate(target, {
+                t: to3D ? 60 : 0,
+                duration,
+                ease: 'inOutQuad',
+                onBegin: () => {
+                    mapState = MapState.animating;
+                },
+                onUpdate: () => {
+                    map.setPitch(target.t);
+                },
+                onComplete: () => {
+                    if (from3D !== to3D) {
+                        animateExtrusion(to3D);
+                    }
+                    else {
+                        setButtonText(to3D ? '2D' : '3D');
+                    }
+                }
+            });
+        }
+
+        function animateExtrusion(to3D = false, duration = 500) {
+            const source = map.getSource('cells');
+            const features = source._data.features;
+            const target = { t: to3D ? 0 : 1 }; // Initial value
+
+            anime.animate(target, {
+                t: to3D ? 1 : 0, // Target value
+                duration,
+                ease: 'inOutQuad', // Renamed from easing
+                onUpdate: () => { // Renamed callback
+                    const progress = target.t; // Direct property access
+
+                    const updated = features.map(f => ({
+                        ...f,
+                        properties: {
+                            ...f.properties,
+                            currentHeight: progress * f.properties.targetHeight
+                        }
+                    }));
+
+                    source.setData({
+                        type: 'FeatureCollection',
+                        features: updated
+                    });
+                },
+                onComplete: () => {
+                    console.log("anime complete, progress: " + target.t);
+                    mapState = to3D ? MapState.in3D : MapState.in2D;
+                    setButtonText(to3D ? '2D' : '3D');
+                }
+            });
+        }
+
+        function pitchButtonPressed() {
+            setButtonText('…');
+            animateMapPitch(map.getPitch() === 0);
+        }
+
+        function setButtonText(text = '3D') {
+            document.querySelector('#pitchButton').innerHTML = text;
+        }
+
+        // function animateView(to3D = false, duration = 1500) {
+        //     const source = map.getSource('cells');
+        //     const features = source._data.features;
+        //     const target = { t: to3D ? 0 : 1 }; // Initial value
+        //     const mapPitchStart = map.getPitch();
+        //     const mapPitchEnd = to3D ? 60 : 0;
+
+        //     anime.animate(target, {
+        //         t: to3D ? 1 : 0, // Target value
+        //         duration,
+        //         ease: 'inOutQuad', // Renamed from easing
+        //         onBegin: () => {
+        //             console.log("Animation start, map pitch from " + mapPitchStart + " to " + mapPitchEnd);
+        //             mapState = MapState.animating;
+        //         },
+        //         onUpdate: () => { // Renamed callback
+        //             const progress = target.t; // Direct property access
+        //             const progressMapPitch = to3D ? progress : 1 - progress;
+        //             console.log("Animation update, map pitch to " + (mapPitchStart + progressMapPitch * (mapPitchEnd - mapPitchStart)));
+        //             map.setPitch(mapPitchStart + progressMapPitch * (mapPitchEnd - mapPitchStart));
+
+        //             const updated = features.map(f => ({
+        //                 ...f,
+        //                 properties: {
+        //                     ...f.properties,
+        //                     currentHeight: progress * f.properties.targetHeight
+        //                 }
+        //             }));
+
+        //             source.setData({
+        //                 type: 'FeatureCollection',
+        //                 features: updated
+        //             });
+        //         },
+        //         onComplete: () => {
+        //             console.log("anime complete, progress: " + target.t);
+        //             mapState = to3D ? MapState.in3D : MapState.in2D;
+        //         }
+        //     });
+        // }
+
+
+        // const animateTo2D = () => animateView(false);
+        // const animateTo2_5D = () => animateView(true);
+    </script>
+</body>
+
+</html>

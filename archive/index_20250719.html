@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>MapLibre 2D/2.5D Transition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .buttons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 16px;
+            font-size: 20px;
+            border: none;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="buttons">
+        <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+    </div>
+    <div id="map"></div>
+
+    <script src="tokens.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script>
+        const searchParams = new URLSearchParams(window.location.search);
+        const dataParam = searchParams.has('data') ? searchParams.get('data').charAt(0).toLowerCase() : 'h';
+        const dataPath = dataParam == 'h' ?
+            'data/20250711/20250711-1331_weightingCautious_drive_hamburg_2012_CLEAN.geojson' :
+            'data/20250711/20250711-1336_weightingCautious_drive_luechow_2012_CLEAN.geojson';
+
+        const verticesCount = 12;
+        const center = dataParam === 'h' ? [10, 53.54] : [11.15, 53.05];
+        const radiusInMeters = 50;
+        const earthRadius = 6371000;
+        const extrusionFactor = 100;
+
+        const latRadiusInDegrees = radiusInMeters / earthRadius * (180 / Math.PI);
+        const lonRadiusInDegrees = radiusInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://api.maptiler.com/maps/basic-v2-dark/style.json?key=' + MAPTILER_KEY,
+            center: center,
+            zoom: 10,
+            pitch: 0,
+            bearing: 0
+        });
+
+        const MapState = { in2D: 1, in3D: 2, animating: 4 };
+        let mapState = MapState.in2D;
+
+        const interpolateColor = (value, thresholds, colorMin = [50, 165, 202], colorMax = [218, 85, 80]) => {
+            let t = 0;
+            for (let i = 0; i < thresholds.length; i++) {
+                if (value <= thresholds[i]) {
+                    t = (i + 0.5) / thresholds.length;
+                    break;
+                }
+            }
+            if (value > thresholds[thresholds.length - 1]) t = 1;
+            const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+            const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+            const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+            return `rgb(${r}, ${g}, ${b})`;
+        };
+
+        const makeHexPolygon = ([centerLon, centerLat], scale = 1) => {
+            const points = [];
+            for (let i = 0; i < verticesCount; i++) {
+                const angle = (i / verticesCount) * 2 * Math.PI;
+                const dLat = latRadiusInDegrees * scale * Math.sin(angle);
+                const dLon = lonRadiusInDegrees * scale * Math.cos(angle);
+                points.push([centerLon + dLon, centerLat + dLat]);
+            }
+            points.push(points[0]);
+            return points;
+        };
+
+        map.on('load', () => {
+            fetch(dataPath)
+                .then(res => res.json())
+                .then(geojson => {
+                    let tMinVals = [], tMaxVals = [];
+                    geojson.features.forEach(f => {
+                        const tMin = f.properties.timeMin;
+                        const tMax = f.properties.timeMax;
+                        if (typeof tMin === 'number') tMinVals.push(tMin);
+                        if (typeof tMax === 'number') tMaxVals.push(tMax);
+                    });
+
+                    tMinVals.sort((a, b) => a - b);
+                    tMaxVals.sort((a, b) => a - b);
+
+                    const q = (arr, bins = 8) => {
+                        const result = [];
+                        for (let i = 1; i < bins; i++) {
+                            result.push(arr[Math.floor(arr.length * i / bins)]);
+                        }
+                        return result;
+                    };
+
+                    const minQuartiles = q(tMinVals);
+                    const maxQuartiles = q(tMaxVals);
+
+                    const extrusions = [];
+                    geojson.features.forEach((f, i) => {
+                        const center = f.geometry.coordinates;
+                        const tMin = f.properties.timeMin;
+                        const tMax = f.properties.timeMax;
+
+                        const colorMin = interpolateColor(tMin, minQuartiles.slice());
+                        const colorMax = interpolateColor(tMax, maxQuartiles.slice());
+
+                        const baseId = i * 2;
+                        const topId = i * 2 + 1;
+
+                        extrusions.push({
+                            type: 'Feature',
+                            id: baseId,
+                            geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 1)] },
+                            properties: {
+                                color: colorMin,
+                                targetHeight: tMin * extrusionFactor
+                            }
+                        });
+
+                        extrusions.push({
+                            type: 'Feature',
+                            id: topId,
+                            geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 0.5)] },
+                            properties: {
+                                color: colorMax,
+                                targetHeight: tMax * extrusionFactor,
+                                baseHeight: 0.01
+                            }
+                        });
+                    });
+
+                    map.addSource('cells', {
+                        type: 'geojson',
+                        data: { type: 'FeatureCollection', features: extrusions }
+                    });
+
+                    map.addLayer({
+                        id: 'extruded-layer',
+                        type: 'fill-extrusion',
+                        source: 'cells',
+                        paint: {
+                            'fill-extrusion-color': ['get', 'color'],
+                            'fill-extrusion-height': ['coalesce', ['feature-state', 'height'], 0],
+                            'fill-extrusion-base': ['coalesce', ['get', 'baseHeight'], 0]
+                        }
+                    });
+
+                    extrusions.forEach(f =>
+                        map.setFeatureState({ source: 'cells', id: f.id }, { height: 0 })
+                    );
+                });
+        });
+
+        map.on('pitchend', () => {
+            const pitch = map.getPitch();
+            if (mapState !== MapState.animating) {
+                if (pitch === 0 && mapState !== MapState.in2D) animateExtrusion(false);
+                else if (pitch > 0 && mapState !== MapState.in3D) animateExtrusion(true);
+            }
+        });
+
+        function animateExtrusion(to3D = false, duration = 500) {
+            const source = map.getSource('cells');
+            const features = source._data.features;
+            const start = performance.now();
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+
+                for (const f of features) {
+                    const newHeight = eased * (to3D ? f.properties.targetHeight : 0);
+                    map.setFeatureState({ source: 'cells', id: f.id }, { height: newHeight });
+                }
+
+                if (t < 1) requestAnimationFrame(frame);
+                else {
+                    mapState = to3D ? MapState.in3D : MapState.in2D;
+                    setButtonText(to3D ? '2D' : '3D');
+                }
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        function animateMapPitch(to3D = false, duration = 1500) {
+            const start = performance.now();
+            const pitchStart = map.getPitch();
+            const pitchEnd = to3D ? 60 : 0;
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+                map.setPitch(pitchStart + (pitchEnd - pitchStart) * eased);
+
+                if (t < 1) requestAnimationFrame(frame);
+                else animateExtrusion(to3D);
+            }
+
+            mapState = MapState.animating;
+            requestAnimationFrame(frame);
+        }
+
+        function pitchButtonPressed() {
+            setButtonText('…');
+            animateMapPitch(map.getPitch() === 0);
+        }
+
+        function setButtonText(text = '3D') {
+            document.querySelector('#pitchButton').innerHTML = text;
+        }
+    </script>
+</body>
+
+</html>

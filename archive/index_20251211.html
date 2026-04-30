@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>MapLibre 2D/2.5D Transition</title>
+    <title>MobiDoc Demonstrator</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
     <!-- Fonts -->
@@ -425,7 +425,7 @@
 
 <body>
     <div class="buttons-tl">
-        <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+        <button id="pitchButton" onclick="pitchButtonPressed()">2D</button>
     </div>
 
     <div id="param-form">
@@ -479,8 +479,7 @@
                 </div>
                 <div class="form-section">
                     <div class="switch-container">
-                        <span class="switch-label"><i class="fas fa-users-viewfinder"></i> Gewichtet nach
-                            Bevölkerung</span>
+                        <span class="switch-label"><i class="fas fa-users-viewfinder"></i> Gewichtet nach Bevölkerung</span>
                         <label class="switch">
                             <input type="checkbox" id="weightedSwitch">
                             <span class="slider"></span>
@@ -493,7 +492,7 @@
     </div>
 
     <div id="legend-container">
-        <div class="legend-title">Erreichbarkeit</div>
+        <div class="legend-title" id="legend-title">Erreichbarkeit</div>
         <div id="legend-content"></div>
     </div>
 
@@ -559,6 +558,9 @@
                     if (typeof updateWeightedCaption === 'function') {
                         updateWeightedCaption(currentWeighted);
                     }
+                    if (typeof updateLegendTitle === 'function') {
+                        updateLegendTitle(currentWeighted);
+                    }
                 }
 
                 // Set values tab active
@@ -588,11 +590,19 @@
                     if (typeof updateLegend === 'function') {
                         updateLegend();
                     }
+                    if (typeof updateLegendTitle === 'function') {
+                        const currentWeighted = params.get('weighted') === 'true';
+                        updateLegendTitle(currentWeighted);
+                    }
                 });
             } else {
                 setActiveTabs();
                 if (typeof updateLegend === 'function') {
                     updateLegend();
+                }
+                if (typeof updateLegendTitle === 'function') {
+                    const currentWeighted = params.get('weighted') === 'true';
+                    updateLegendTitle(currentWeighted);
                 }
             }
         })();
@@ -712,6 +722,7 @@
             if (weightedSwitch) {
                 weightedSwitch.addEventListener('change', function () {
                     updateWeightedCaption(this.checked);
+                    updateLegendTitle(this.checked);
 
                     // Update URL without reload
                     const url = new URL(window.location.href);
@@ -952,6 +963,14 @@
             }
         }
 
+        // Global function for updating legend title
+        function updateLegendTitle(isWeighted) {
+            const legendTitle = document.getElementById('legend-title');
+            if (legendTitle) {
+                legendTitle.textContent = isWeighted ? 'Aggregierte Erreichbarkeit' : 'Erreichbarkeit';
+            }
+        }
+
         // Global function for updating legend
         function updateLegend() {
             const legendContent = document.getElementById('legend-content');
@@ -1068,6 +1087,7 @@
         const center = window.dataParam === 'h' ? [10, 53.54] : [11.15, 53.05];
         const radiusInMeters = 50;
         const earthRadius = 6371000;
+        const pitch3D = 60;
 
         // let extrusionFactor = 1;
         // if (mode === 'nowNom' || mode === 'nowMinMax')
@@ -1081,12 +1101,12 @@
             style: 'https://api.maptiler.com/maps/basic-v2-dark/style.json?key=' + MAPTILER_KEY,
             center: center,
             zoom: 10,
-            pitch: 0,
+            pitch: pitch3D,
             bearing: 0
         });
 
         const MapState = { in2D: 1, in3D: 2, animating: 4 };
-        let mapState = MapState.in2D;
+        let mapState = MapState.in3D;
 
         let nav = new maplibregl.NavigationControl();
         map.addControl(nav, 'top-right');
@@ -1154,11 +1174,11 @@
                 // console.log('Zero values count:', zeroVals.length);
                 // console.log('Max absolute values - Positive:', maxPositive, 'Negative:', maxNegative);
                 // console.log('Using', maxPositive >= maxNegative ? 'positive' : 'negative', 'range for symmetric thresholds');
-                // console.log('Positive quantiles (increases):', positiveQuantiles);
-                // console.log('Negative quantiles (decreases):', negativeQuantiles);
+                console.log('Positive quantiles (increases):', positiveQuantiles);
+                console.log('Negative quantiles (decreases):', negativeQuantiles);
             } else {
                 combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
-                // console.log('Quantiles:', combinedQuantiles);
+                console.log('Quantiles:', combinedQuantiles);
             }
 
             // For prognosis mode, use maximum absolute value for proper scaling
@@ -1278,7 +1298,13 @@
         }
 
         const interpolateColor = (value, thresholds, positiveThresholds, negativeThresholds) => {
-            let colorMin, colorMax;
+            const white = [255, 255, 255];
+            const blue = [50, 165, 202];
+            const red = [218, 85, 80];
+
+            const colorMin = window.prognosis ? white : blue;
+            const colorMax = (window.prognosis && value <= 0) ? blue : red;
+
             let useThresholds = thresholds;
             
             if (window.prognosis) {
@@ -1288,8 +1314,6 @@
                 }
                 
                 if (value > 0) {
-                    colorMin = [255, 255, 255];
-                    colorMax = [218, 85, 80];
                     // Use separate positive quantiles if available
                     if (positiveThresholds && positiveThresholds.length > 0) {
                         useThresholds = positiveThresholds;
@@ -1322,8 +1346,6 @@
                     }
                 }
                 else {
-                    colorMin = [255, 255, 255];
-                    colorMax = [50, 165, 202];
                     // Use separate negative quantiles if available, and work with absolute values
                     if (negativeThresholds && negativeThresholds.length > 0) {
                         useThresholds = negativeThresholds.map(v => Math.abs(v));
@@ -1356,10 +1378,6 @@
                         return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
                     }
                 }
-            }
-            else {
-                colorMin = [50, 165, 202];
-                colorMax = [218, 85, 80];
             }
 
             // Standard threshold-based interpolation
@@ -1423,13 +1441,13 @@
                         [prop.tMin_100pctDocs, prop.tMax_100pctDocs];
                 case 'progNom10':
                     return weighted ?
-                        [prop.EwM_40_Nom_090pctDocs - prop.EwM_22_Nom_100pctDocs] :
-                        [prop.tNom_090pctDocs - prop.tNom_100pctDocs];
+                        [prop.EwM_40_Nom_090pctDocs - prop.EwM_22_Nom_100pctDocs, prop.EwM_40_Nom_080pctDocs - prop.EwM_22_Nom_100pctDocs] :
+                        [prop.tNom_090pctDocs - prop.tNom_100pctDocs, prop.tNom_080pctDocs - prop.tNom_100pctDocs];
                 case 'progNom20':
                     return weighted ?
                         // [prop.EwM_22_Nom_100pctDocs * (1 + prop.EwM_22_40_Nom_080pctDocs_diff/100)] : 
-                        [prop.EwM_40_Nom_080pctDocs - prop.EwM_22_Nom_100pctDocs] :
-                        [prop.tNom_080pctDocs - prop.tNom_100pctDocs];
+                        [prop.EwM_40_Nom_080pctDocs - prop.EwM_22_Nom_100pctDocs, prop.EwM_40_Nom_090pctDocs - prop.EwM_22_Nom_100pctDocs] :
+                        [prop.tNom_080pctDocs - prop.tNom_100pctDocs, prop.tNom_090pctDocs - prop.tNom_100pctDocs];
                 default:
                     return [];
             }
@@ -1491,7 +1509,7 @@
         function animateMapPitch(to3D = false, duration = 1500) {
             const start = performance.now();
             const pitchStart = map.getPitch();
-            const pitchEnd = to3D ? 60 : 0;
+            const pitchEnd = to3D ? pitch3D : 0;
 
             function frame(now) {
                 const t = Math.min((now - start) / duration, 1);

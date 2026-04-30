@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>MapLibre 2D/2.5D Transition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #map {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .buttons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 16px;
+            font-size: 20px;
+            border: none;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="buttons">
+        <button id="pitchButton" onclick="pitchButtonPressed()">3D</button>
+    </div>
+    <div id="map"></div>
+
+    <script src="tokens.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <!-- <script src="https://unpkg.com/culori"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/culori"></script>
+    <script>
+        const searchParams = new URLSearchParams(window.location.search);
+
+        const verticesCount = 12;
+        const center = [11.15, 53.05];
+        const radiusInMeters = 50;
+        const earthRadius = 6371000;
+        const rangeExtrusionFactor = 250;
+
+        const latRadiusInDegrees = radiusInMeters / earthRadius * (180 / Math.PI);
+        const lonRadiusInDegrees = radiusInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://api.maptiler.com/maps/dataviz-dark/style.json?key=' + MAPTILER_KEY,
+            center: center,
+            zoom: 10,
+            pitch: 0,
+            bearing: 0
+        });
+
+        const MapState = { in2D: 1, in3D: 2, animating: 4 };
+        let mapState = MapState.in2D;
+
+        const valueToColor = (val) => {
+            const max = 60, min = 0;
+            const pct = Math.min(1, Math.max(0, (val - min) / (max - min)));
+            const h = 220;
+            const l = 90 - pct * 50;
+            return `hsl(${h}, 100%, ${l}%)`;
+        };
+
+        const bivariateColor = (nom, range, baseNomColor = [312, 41, 57], baseRangeColor = [180, 50, 57]) => {
+            const nomMax = 45, nomMin = 0;
+            const rangeMax = 10, rangeMin = 0;
+            const nomNorm = Math.min(1, Math.max(0, (nom - nomMin) / (nomMax - nomMin)));
+            const rangeNorm = Math.min(1, Math.max(0, (range - rangeMin) / (rangeMax - rangeMin)));
+
+            const hue = (1 - rangeNorm) * baseNomColor[0] + rangeNorm * baseRangeColor[0];
+            const sat = (1 - nomNorm) * baseNomColor[1] + nomNorm * baseRangeColor[1];
+            const light = (1 - nomNorm) * baseNomColor[2] + nomNorm * baseRangeColor[2];
+
+            return `hsl(${Math.round(hue)}, ${Math.round(sat)}%, ${Math.round(light)}%)`;
+        };
+
+        function getBivariateColor(x, y, colorX = '#BE64AC', colorY = '#5AC8C8') {
+            const { parse, interpolate, formatHex, lab } = culori;
+
+            const xMin = 0, xMax = 1;
+            const yMin = 0, yMax = 1;
+
+            // Normalize x and y to [0, 1]
+            const cx = Math.max(0, Math.min(1, (x - xMin) / (xMax - xMin)));
+            const cy = Math.max(0, Math.min(1, (y - yMin) / (yMax - yMin)));
+
+            // const interpolationMode = searchParams.has('mode') ? searchParams.get('mode') : 'rgb';//'lab';
+
+            // // Interpolate from white to colorX for X axis
+            // const interpX = interpolate([parse('#ffffff'), parse(colorX)], interpolationMode)(cx);
+            // // Interpolate from white to colorY for Y axis
+            // const interpY = interpolate([parse('#ffffff'), parse(colorY)], interpolationMode)(cy);
+
+            // // Now blend the two interpolated colors
+            // const final = interpolate([interpX, interpY], interpolationMode)(0.5);
+
+            // console.log(cx, cy, formatHex(interpX), formatHex(interpY), formatHex(final));
+
+            // // Return as hex string
+            // return formatHex(final);
+
+            // Corner colors
+            const c00 = lab(parse('#ffffff')); // white
+            const c10 = lab(parse(colorX));
+            const c01 = lab(parse(colorY));
+            const c11 = interpolate([c10, c01], 'lab')(0.5);
+
+            // console.log('c00', c00);
+            // console.log('c10', c10);
+            // console.log('c01', c01);
+            // console.log('c11', c11);
+
+            // const testLab = culori.lab({l: 50, a: 20, b: 30, opacity: 1});
+            // console.log('testLab', testLab);
+            // console.log('testLab hex', culori.formatHex(testLab));
+
+            // Use culori.lab() to build LAB colors properly
+            function lerpLab(cA, cB, t) {
+                return lab({
+                    mode: 'lab',
+                    l: cA.l + (cB.l - cA.l) * t,
+                    a: cA.a + (cB.a - cA.a) * t,
+                    b: cA.b + (cB.b - cA.b) * t,
+                    opacity: 1
+                });
+            }
+
+            // Interpolate bottom row
+            const bottom = lerpLab(c00, c10, cx);
+            // Interpolate top row
+            const top = lerpLab(c01, c11, cx);
+            // Interpolate between bottom and top rows
+            const result = lerpLab(bottom, top, cy);
+
+            console.log('bottom', bottom);
+            console.log('top', top);
+            console.log('result', result);
+
+            return formatHex(result);
+        }
+
+        const makeHexPolygon = ([centerLon, centerLat]) => {
+            const points = [];
+            for (let i = 0; i < verticesCount; i++) {
+                const angle = (i / verticesCount) * 2 * Math.PI;
+                const dLat = latRadiusInDegrees * Math.sin(angle);
+                const dLon = lonRadiusInDegrees * Math.cos(angle);
+                points.push([centerLon + dLon, centerLat + dLat]);
+                // console.log('dLon: '  + dLon + ', dLat: ' + dLat);
+            }
+            points.push(points[0]);
+            return points;
+        };
+
+        map.on('load', () => {
+            const rangeRelative = searchParams.has('range') ? searchParams.get('range') : 'absolute';//'lab';
+            fetch('data/data_with_rel_range.geojson')
+                .then(res => res.json())
+                .then(geojson => {
+                    let nomMax = -Infinity, nomMin = Infinity, rangeMax = -Infinity, rangeMin = Infinity;
+                    geojson.features.forEach((f, i) => {
+                        const nom = f.properties.timeNom;
+                        const range = rangeRelative == "relative" ? f.properties.rel_range : f.properties.range;
+                        if (typeof nom === 'number') {
+                            nomMax = Math.max(nomMax, nom);
+                            nomMin = Math.min(nomMin, nom);
+                        }
+                        if (typeof range === 'number') {
+                            rangeMax = Math.max(rangeMax, range);
+                            rangeMin = Math.min(rangeMin, range);
+                        }
+                    });
+                    console.log('nomMax: ' + nomMax);
+                    console.log('nomMin: ' + nomMin);
+                    console.log('rangeMax: ' + rangeMax);
+                    console.log('rangeMin: ' + rangeMin);
+
+                    geojson.features.forEach((f, i) => {
+                        f.id = i;
+                        // const nom = f.properties.einwohnerMinutenNom;
+                        const nom = f.properties.timeNom;
+                        const range = f.properties.range;
+
+                        // f.properties.color = valueToColor(nom);
+                        f.properties.color = bivariateColor(nom, range);
+                        // f.properties.color = getBivariateColor(nom, range);
+                        f.properties.targetHeight = range * rangeExtrusionFactor;
+                        const center = f.geometry.coordinates;
+                        f.geometry = {
+                            type: 'Polygon',
+                            coordinates: [makeHexPolygon(center)]
+                        };
+                    });
+
+                    map.addSource('cells', {
+                        type: 'geojson',
+                        data: geojson
+                    });
+
+                    map.addLayer({
+                        id: 'extruded-layer',
+                        type: 'fill-extrusion',
+                        source: 'cells',
+                        paint: {
+                            'fill-extrusion-color': ['get', 'color'],
+                            'fill-extrusion-height': ['coalesce', ['feature-state', 'height'], 0],
+                            'fill-extrusion-base': 0
+                        }
+                    });
+                });
+        });
+
+        map.on('pitchend', () => {
+            const pitch = map.getPitch();
+            if (mapState !== MapState.animating) {
+                if (pitch === 0 && mapState !== MapState.in2D) animateExtrusion(false);
+                else if (pitch > 0 && mapState !== MapState.in3D) animateExtrusion(true);
+            }
+        });
+
+        function animateExtrusion(to3D = false, duration = 500) {
+            const source = map.getSource('cells');
+            const features = source._data.features;
+            const start = performance.now();
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+
+                for (const f of features) {
+                    const newHeight = eased * (to3D ? f.properties.targetHeight : 0);
+                    map.setFeatureState({ source: 'cells', id: f.id }, { height: newHeight });
+                }
+
+                if (t < 1) requestAnimationFrame(frame);
+                else {
+                    mapState = to3D ? MapState.in3D : MapState.in2D;
+                    setButtonText(to3D ? '2D' : '3D');
+                }
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        function animateMapPitch(to3D = false, duration = 1500) {
+            const start = performance.now();
+            const pitchStart = map.getPitch();
+            const pitchEnd = to3D ? 60 : 0;
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+                map.setPitch(pitchStart + (pitchEnd - pitchStart) * eased);
+
+                if (t < 1) requestAnimationFrame(frame);
+                else animateExtrusion(to3D);
+            }
+
+            mapState = MapState.animating;
+            requestAnimationFrame(frame);
+        }
+
+        function pitchButtonPressed() {
+            setButtonText('…');
+            animateMapPitch(map.getPitch() === 0);
+        }
+
+        function setButtonText(text = '3D') {
+            document.querySelector('#pitchButton').innerHTML = text;
+        }
+    </script>
+</body>
+
+</html>
