@@ -369,9 +369,23 @@
             color: white;
         }
 
-        .maplibregl-ctrl-group button {
+        /* Navigation +/- / compass: match param-form glass; cluster radius matches generic buttons (pitchButton = 4px) */
+        .maplibregl-ctrl-group.maplibregl-ctrl,
+        .mapboxgl-ctrl-group.mapboxgl-ctrl {
+            background: rgba(20, 20, 25, 0.4) !important;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: none !important;
+        }
+
+        .maplibregl-ctrl-group button,
+        .mapboxgl-ctrl-group button {
             width: 36px !important;
             height: 36px !important;
+            border-radius: 0 !important;
+            background: transparent !important;
         }
 
         #legend-container {
@@ -503,14 +517,18 @@
                 z-index: 999;
             }
 
-            .buttons-tl {
-                top: 10px;
-                left: 10px;
-            }
-
             button {
                 padding: 10px 14px;
                 font-size: 18px;
+            }
+        }
+
+        /* Desktop: stable panel width (region switch changes specialty option text lengths) */
+        @media screen and (min-width: 769px) {
+            #param-form {
+                box-sizing: border-box;
+                width: 360px;
+                max-width: calc(100vw - 48px);
             }
         }
 
