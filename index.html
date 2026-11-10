@@ -459,6 +459,28 @@
             transform: translateX(-100%);
         }
 
+        .legend-unreachable {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 12px;
+            color: white;
+            white-space: nowrap;
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .legend-swatch {
+            height: 8px;
+            width: 16px;
+            border-radius: 4px;
+        }
+
         /* Drawer handle for mobile */
         #drawer-handle {
             display: none;
@@ -1792,12 +1814,21 @@
                     const position = ((i + 1) / numSegments) * 100;
                     labels += `<div class="legend-label" style="left: ${position}%;">${prettyBreaks[i]} min</div>`;
                 }
+                labels += `<div class="legend-label right-aligned" style="left: 100%;">60 min</div>`;
                 
                 legendContent.innerHTML = `
                     <div class="legend-bar">${segments}</div>
                     <div class="legend-labels">${labels}</div>
                 `;
             }
+
+            // Grey: no practice within 60 min (Zumutbarkeitsschwelle)
+            legendContent.innerHTML += `
+                <div class="legend-unreachable">
+                    <div class="legend-swatch" style="background: rgb(140, 140, 140);"></div>
+                    ${window.prognosis ? 'heute oder im Szenario keine' : 'keine'} Praxis in 60 min erreichbar
+                </div>
+            `;
         }
 
         const dataPath = window.dataParam == 'h' ?
@@ -1920,9 +1951,6 @@
                 const center = f.geometry.coordinates;
                 const t = properties(f.properties, window.mode, window.weighted);
 
-                // Skip cells without values (no connection)
-                if (isNaN(t[0]) || (window.mode === 'nowMinMax' && isNaN(t[1]))) return;
-
                 // Always add the outer ring (base)
                 extrusions.push({
                     type: 'Feature',
@@ -1931,7 +1959,7 @@
                     properties: {
                         color: interpolateColor(t[0], combinedQuantiles, positiveQuantiles, negativeQuantiles),
                         baseHeight: 0,
-                        targetHeight: Math.abs(t[0]) * ef
+                        targetHeight: Math.abs(t[0]) * ef || 0 // not reachable: flat
                     }
                 });
 
@@ -1943,7 +1971,7 @@
                     properties: {
                         color: interpolateColor(window.mode === 'nowMinMax' ? t[1] : t[0], combinedQuantiles, positiveQuantiles, negativeQuantiles),
                         baseHeight: 0,
-                        targetHeight: window.mode === 'nowMinMax' ? Math.abs(t[1]) * ef : 0
+                        targetHeight: window.mode === 'nowMinMax' ? Math.abs(t[1]) * ef || 0 : 0
                     }
                 });
             });
@@ -2030,6 +2058,11 @@
             let colorMin, colorMax;
             let useThresholds = thresholds;
             
+            // Cells without a practice within 60 min should always be grey
+            if (isNaN(value)) {
+                return 'rgb(140, 140, 140)';
+            }
+
             if (window.prognosis) {
                 // Zero values should always be white (no change)
                 if (value === 0) {
@@ -2169,6 +2202,11 @@
                 }
             });
             prop = values;
+
+            // No practice within 60 min (Zumutbarkeitsschwelle): not reachable, also for the person-minutes (EwM_22_..., EwM_40_...)
+            Object.keys(prop).forEach(key => {
+                if (!(prop[key.replace(/EwM_\d\d_/, 't')] <= 60)) prop[key] = NaN;
+            });
 
             switch (mode) {
                 case 'nowNom':
