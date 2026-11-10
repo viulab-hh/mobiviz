@@ -1078,6 +1078,23 @@
                 </div>
                 <div class="form-section">
                     <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-route"></i> Verkehrsmittel</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Verkehrsmittel"
+                                aria-expanded="false" aria-controls="tip-section-travel">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-travel" role="tooltip">
+                            Wählen Sie das Verkehrsmittel aus, für das die Fahrzeiten angezeigt werden sollen.</div>
+                    </div>
+                    <div class="tab-bar" data-group="travel">
+                        <button type="button" class="tab-button" data-value="car">Pkw</button>
+                        <button type="button" class="tab-button" data-value="transit">ÖPNV</button>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <div class="form-section-heading">
                         <h3 class="form-section-title"><i class="fas fa-chart-simple"></i> Erreichbarkeitswerte</h3>
                         <div class="section-info">
                             <button type="button" class="section-info-btn" aria-label="Info: Erreichbarkeitswerte"
@@ -1086,11 +1103,21 @@
                             </button>
                         </div>
                         <div class="section-info-tip" id="tip-section-values" role="tooltip">
-                            Legen Sie fest, ob nur Mittelwerte oder zusätzlich auch Minima und Maxima angezeigt werden.</div>
+                            Legen Sie fest, ob der typische Fall oder die Spannweite zwischen günstigem und ungünstigem
+                            Fall angezeigt wird.
+                            <ul style="margin: 6px 0 0; padding-left: 16px;">
+                                <li><strong>Typischer Fall:</strong> Gehgeschwindigkeit 3,6 km/h, typische Ausfälle und
+                                    Verspätungen im ÖPNV, Pkw-Fahrzeiten ×1,5 (Hamburg) bzw. ×1,1 (Lüchow-Dannenberg)
+                                    gegenüber freier Fahrt.</li>
+                                <li><strong>Günstiger Fall:</strong> Gehgeschwindigkeit 4,32 km/h, keine Ausfälle oder
+                                    Verspätungen, Pkw bei freier Fahrt.</li>
+                                <li><strong>Ungünstiger Fall:</strong> Gehgeschwindigkeit 2,88 km/h, mehr Ausfälle und
+                                    1,5-fache Verspätungen, Pkw ×2,0 bzw. ×1,2.</li>
+                            </ul></div>
                     </div>
                     <div class="tab-bar" data-group="values">
-                        <button type="button" class="tab-button" data-value="nowNom">Mittelwerte</button>
-                        <button type="button" class="tab-button" data-value="nowMinMax">Minima/Maxima</button>
+                        <button type="button" class="tab-button" data-value="nowNom">Typischer Fall</button>
+                        <button type="button" class="tab-button" data-value="nowMinMax">Spannweite</button>
                     </div>
                 </div>
                 <div class="form-section">
@@ -1233,6 +1260,7 @@
             // Set active state as soon as possible
             function setActiveTabs() {
                 const currentData = params.get('data') || 'h'; // default to 'h'
+                const currentTravel = params.get('travel') || 'car'; // default to 'car'
                 const currentMode = params.get('mode') || 'nowNom'; // default to 'nowNom'
                 const currentWeighted = params.get('weighted') === 'true'; // default to false
                 const currentSpecialty = params.get('specialty') || 'hausaerzteErwachsene'; // default specialty
@@ -1245,6 +1273,15 @@
                         btn.classList.remove('active');
                     });
                     dataTab.classList.add('active');
+                }
+
+                // Set travel tab active
+                const travelTab = document.querySelector(`.tab-bar[data-group="travel"] .tab-button[data-value="${currentTravel}"]`);
+                if (travelTab) {
+                    document.querySelectorAll('.tab-bar[data-group="travel"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    travelTab.classList.add('active');
                 }
 
                 // Set specialty select
@@ -1309,13 +1346,7 @@
             if (!specialtySelect) return;
 
             // Specialties only available in Hamburg
-            const hamburgOnlySpecialties = [
-                'fachaerztlicheKindermedizin',
-                'laborMedizin',
-                'pathologie',
-                'sonderfaecher',
-                'strahlentherapieNuklearmedizin'
-            ];
+            const hamburgOnlySpecialties = [];
 
             const options = specialtySelect.querySelectorAll('option');
             const currentValue = specialtySelect.value;
@@ -1509,6 +1540,13 @@
 
                         // Animate camera to new location
                         animateToLocation(value);
+                    } else if (group === 'travel') {
+                        // Direct mapping for travel
+                        url.searchParams.set('travel', value);
+                        window.history.replaceState({}, '', url.toString());
+
+                        // Update map data
+                        updateMapData();
                     } else if (group === 'values' || group === 'prognosis') {
                         // Get final combined mode
                         const mode = getCombinedMode();
@@ -1586,12 +1624,14 @@
             function updateMapData() {
                 // Get current parameters
                 const currentData = getCurrentData();
+                const currentTravel = getCurrentTravel();
                 const currentMode = getCombinedMode();
                 const currentWeighted = document.getElementById('weightedSwitch').checked;
                 const currentSpecialty = getCurrentSpecialty();
 
                 // Update global variables
                 window.dataParam = currentData;
+                window.travel = currentTravel;
                 window.mode = currentMode;
                 window.weighted = currentWeighted;
                 window.specialty = currentSpecialty;
@@ -1602,8 +1642,8 @@
 
                 // Update data path
                 const dataPath = window.dataParam == 'h' ?
-                    `data/20250924-hamburg/${currentSpecialty}.geojson` :
-                    `data/20250919-luechow/${currentSpecialty}.geojson`;
+                    `data/20261110-hamburg/${currentSpecialty}.geojson` :
+                    `data/20261110-luechow/${currentSpecialty}.geojson`;
 
                 // Load and process new data
                 fetch(dataPath)
@@ -1619,6 +1659,11 @@
             function getCurrentData() {
                 const activeDataTab = document.querySelector('.tab-bar[data-group="data"] .tab-button.active');
                 return activeDataTab ? activeDataTab.dataset.value : 'h';
+            }
+
+            function getCurrentTravel() {
+                const activeTravelTab = document.querySelector('.tab-bar[data-group="travel"] .tab-button.active');
+                return activeTravelTab ? activeTravelTab.dataset.value : 'car';
             }
 
             function getCurrentSpecialty() {
@@ -1640,6 +1685,7 @@
         window.mode = (searchParams.get('mode') || 'nowNom');
         // console.log("mode: ", window.mode);
         window.dataParam = (searchParams.get('data') || 'h');
+        window.travel = (searchParams.get('travel') || 'car');
         window.weighted = (searchParams.get('weighted') === 'true');
         window.specialty = (searchParams.get('specialty') || 'hausaerzteErwachsene');
 
@@ -1658,7 +1704,7 @@
             const legendContent = document.getElementById('legend-content');
             if (!legendContent) return;
 
-            const prettyBreaks = /*window.dataParam == 'h' ? [2, 4, 6] :*/ [5, 10, 15];
+            const prettyBreaks = window.travel == 'transit' ? [15, 30, 45] : [5, 10, 15];
             const colorMin = [50, 165, 202]; // Blue
             const colorMax = [218, 85, 80];  // Red
             
@@ -1755,14 +1801,12 @@
         }
 
         const dataPath = window.dataParam == 'h' ?
-            `data/20250924-hamburg/${window.specialty}.geojson` :
-            `data/20250919-luechow/${window.specialty}.geojson`;
+            `data/20261110-hamburg/${window.specialty}.geojson` :
+            `data/20261110-luechow/${window.specialty}.geojson`;
 
         const binCount = parseInt(searchParams.get('bins')) || 4;
 
         // SEARCH PARAMS
-
-        const prettyBreaks = /*window.dataParam == 'h' ? [2, 4, 6] :*/ [5, 10, 15];
 
         const verticesCountNow = 12;
         const verticesCountPrognosis = 4;
@@ -1799,9 +1843,9 @@
                 const t = properties(f.properties, window.mode, window.weighted);
                 if (Array.isArray(t)) {
                     t.forEach(val => {
-                        if (typeof val === 'number') allVals.push(val);
+                        if (typeof val === 'number' && !isNaN(val)) allVals.push(val);
                     });
-                } else if (typeof t === 'number') {
+                } else if (typeof t === 'number' && !isNaN(t)) {
                     allVals.push(t);
                 }
             });
@@ -1858,6 +1902,7 @@
                 // console.log('Positive quantiles (increases):', positiveQuantiles);
                 // console.log('Negative quantiles (decreases):', negativeQuantiles);
             } else {
+                const prettyBreaks = window.travel == 'transit' ? [15, 30, 45] : [5, 10, 15];
                 combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
                 // console.log('Quantiles:', combinedQuantiles);
             }
@@ -1874,6 +1919,9 @@
             geojson.features.forEach((f, i) => {
                 const center = f.geometry.coordinates;
                 const t = properties(f.properties, window.mode, window.weighted);
+
+                // Skip cells without values (no connection)
+                if (isNaN(t[0]) || (window.mode === 'nowMinMax' && isNaN(t[1]))) return;
 
                 // Always add the outer ring (base)
                 extrusions.push({
@@ -2113,6 +2161,15 @@
         };
 
         const properties = (prop, mode, weighted = false) => {
+            // Values of the selected travel mode (car_..., transit_...), empty values (null) as NaN
+            const values = {};
+            Object.keys(prop).forEach(key => {
+                if (key.startsWith(window.travel + '_')) {
+                    values[key.replace(window.travel + '_', '')] = prop[key] === null ? NaN : prop[key];
+                }
+            });
+            prop = values;
+
             switch (mode) {
                 case 'nowNom':
                     return weighted ?
