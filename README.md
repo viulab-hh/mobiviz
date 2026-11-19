@@ -100,4 +100,14 @@ archive/     # earlier versions of the prototype
 
 ## License
 
-_To be added._
+**Code** (`index.html`, `tokens.js`) is released under the [MIT License](LICENSE).
+© 2026 viu:lab, HAW Hamburg
+
+**Data** (`data/`) is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+© g2lab, HafenCity Universität Hamburg. The data are derived from:
+
+- © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), available under the [ODbL](https://opendatacommons.org/licenses/odbl/)
+- Zensus 2022, © Statistische Ämter des Bundes und der Länder, [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0)
+- GTFS timetable data © [DELFI e.V.](https://www.delfi.de/)
+
+**Third-party libraries** keep their own licenses (e.g. anime.js: MIT, see `lib/`).
