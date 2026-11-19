@@ -4,19 +4,19 @@
 
 ![Screenshot of the MobiDoc demonstrator](docs/mobiviz.png)
 
-The demonstrator shows the modelled accessibility of doctors' practices as travel times in minutes. For various medical specialties, it shows accessibility in **Hamburg** and **Lüchow-Dannenberg**, along with the possible variation of these values. The map can switch between a flat 2D view and an extruded 2.5D view. In its current form, the app is available in German only.
+The demonstrator shows the modelled accessibility of doctors' practices as travel times in minutes. For various medical specialties, it shows accessibility in **Hamburg** and **Lüchow-Dannenberg**, along with the possible variation of these values. The map can switch between a flat 2D view and an extruded 3D view. In its current form, the app is available in German only.
 
 > The demonstrator does **not** provide patients with individual information on specific travel times. It is meant as one criterion for assessing regional differences in healthcare provision.
 
 ## About the project
 
-The demonstrator and its underlying data were developed in the project [MobiDoc](https://viulab.haw-hamburg.de/projects/mobidoc) ([Advanced spatio-temporal modelling and simulation of the accessibility of medical facilities](https://www.bmv.de/SharedDocs/DE/Artikel/mFUND/Projekte/mobidoc.html)), which focused on an extended analysis of the accessibility of medical care. The aim of the project was to better estimate and visualize spatial and temporal differences in the accessibility of doctors' practices. To this end, travel times were modelled, uncertainties in the underlying data were taken into account, and user-oriented visualizations were developed and evaluated.
+The demonstrator and its underlying data were developed in the project [MobiDoc](https://www.bmv.de/SharedDocs/DE/Artikel/mFUND/Projekte/mobidoc.html) (Advanced spatio-temporal modelling and simulation of the accessibility of medical facilities), which focused on an extended analysis of the accessibility of medical care. The aim of the project was to better estimate and visualize spatial and temporal differences in the accessibility of doctors' practices. To this end, travel times were modelled, uncertainties in the underlying data were taken into account, and user-oriented visualizations were developed and evaluated.
 
 The visualization was developed at the [viu:lab](https://viulab.haw-hamburg.de) (HAW Hamburg). MobiDoc was funded by the mFUND programme of the German Federal Ministry for Digital and Transport (BMV).
 
 ## Features
 
-- **2D ↔ 2.5D transition:** animated switch between a flat map and extruded columns (MapLibre `fill-extrusion`), via button or by tilting the map
+- **2D ↔ 3D transition:** animated switch between a flat map and extruded columns (MapLibre `fill-extrusion`), via button or by tilting the map
 - **Region:** Hamburg or Lüchow
 - **Specialty:** general practitioners (adults / children), surgery, dermatology, ophthalmology, ENT, internal medicine, radiology, neurology/psychiatry, urology and more
 - **Uncertainty:** show mean values only, or include minimum/maximum ranges
