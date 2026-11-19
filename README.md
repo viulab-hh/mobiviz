@@ -1,9 +1,10 @@
 # MobiViz – MobiDoc Demonstrator
 
 **Live demo:** https://viulab-hh.github.io/mobiviz/
-![Screenshot of the MobiDoc demonstrator](docs/screenshot.png)
 
-The demonstrator shows the modelled accessibility of doctors' practices as travel times in minutes. For various medical specialties, it shows accessibility in **Hamburg** and **Lüchow-Dannenberg**, along with the possible variation of these values. The map can switch between a flat **2D** view and an extruded **2.5D** view. In its current form, the app is available in German only.
+![Screenshot of the MobiDoc demonstrator](docs/mobiviz.png)
+
+The demonstrator shows the modelled accessibility of doctors' practices as travel times in minutes. For various medical specialties, it shows accessibility in **Hamburg** and **Lüchow-Dannenberg**, along with the possible variation of these values. The map can switch between a flat 2D view and an extruded 2.5D view. In its current form, the app is available in German only.
 
 > The demonstrator does **not** provide patients with individual information on specific travel times. It is meant as one criterion for assessing regional differences in healthcare provision.
 
