@@ -1822,10 +1822,10 @@
                 `;
             }
 
-            // Grey: no practice within 60 min (Zumutbarkeitsschwelle)
+            // White: no practice within 60 min (Zumutbarkeitsschwelle)
             legendContent.innerHTML += `
                 <div class="legend-unreachable">
-                    <div class="legend-swatch" style="background: rgb(140, 140, 140);"></div>
+                    <div class="legend-swatch" style="background: rgb(255, 255, 255);"></div>
                     ${window.prognosis ? 'heute oder im Szenario keine' : 'keine'} Praxis in 60 min erreichbar
                 </div>
             `;
@@ -2058,9 +2058,9 @@
             let colorMin, colorMax;
             let useThresholds = thresholds;
             
-            // Cells without a practice within 60 min should always be grey
+            // Cells without a practice within 60 min should always be white
             if (isNaN(value)) {
-                return 'rgb(140, 140, 140)';
+                return 'rgb(255, 255, 255)';
             }
 
             if (window.prognosis) {
