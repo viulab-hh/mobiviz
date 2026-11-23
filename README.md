@@ -42,16 +42,25 @@ data/
 └── 20261110-luechow/   # Lüchow-Dannenberg
 ```
 
-Main attributes per feature:
+Each feature is the centroid of a 100 m census grid cell. Attribute names follow the pattern `<mode>_<measure>_<share of physicians>`:
+ 
+- `<mode>`: `car` (car) or `transit` (public transport)
+- `<share of physicians>`: `100pctDocs` (status quo), `090pctDocs` / `080pctDocs` (scenarios with 10 % / 20 % fewer physicians)
 
-| Attribute | Meaning |
+
+| Attribute (per mode) | Meaning |
 |---|---|
-| `tNom_100pctDocs` | Mean travel time in minutes (status quo) |
-| `tMin_100pctDocs`, `tMax_100pctDocs` | Lower / upper bound of the travel time |
-| `tNom_090pctDocs`, `tNom_080pctDocs` | Mean travel time in the scenarios with 90 % / 80 % of physicians |
-| `EwM_*` | Population-weighted counterparts of the values above |
+| `<mode>_tNom_100pctDocs` | Mean travel time in minutes (status quo) |
+| `<mode>_tMin_100pctDocs`, `<mode>_tMax_100pctDocs` | Lower / upper bound of the travel time |
+| `<mode>_tNom_090pctDocs`, `<mode>_tNom_080pctDocs` | Mean travel time in the 90 % / 80 % scenarios |
+| `<mode>_EwM_22_Nom/Min/Max_100pctDocs` | Person-minutes (travel time × residents of the cell), population 2022 (census) |
+| `<mode>_EwM_40_Nom_090pctDocs`, `<mode>_EwM_40_Nom_080pctDocs` | Person-minutes in the 90 % / 80 % scenarios, projected population 2040 |
 
-⚠️ The `data/` folder is about 280 MB in total.
+Example: `transit_tMax_100pctDocs` is the upper bound of the public-transport travel time in the status quo.
+ 
+Cells without a practice within 60 minutes are treated as not reachable in the app.
+ 
+⚠️ The `data/` folder is about 430 MB in total (Hamburg ≈ 370 MB, Lüchow-Dannenberg ≈ 60 MB).
 
 ## Running locally
 
