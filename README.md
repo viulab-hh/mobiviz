@@ -38,8 +38,8 @@ The data are stored as GeoJSON point files (one file per specialty and region):
 
 ```
 data/
-├── 20250924-hamburg/   # Hamburg, one <specialty>.geojson per specialty
-└── 20250919-luechow/   # Lüchow-Dannenberg
+├── 20261110-hamburg/   # Hamburg, one <specialty>.geojson per specialty
+└── 20261110-luechow/   # Lüchow-Dannenberg
 ```
 
 Main attributes per feature:
