@@ -89,6 +89,7 @@ The key in this repository is restricted to the allowed origins of the project (
 index.html   # the complete application (HTML, CSS, JS)
 tokens.js    # MapTiler API key
 data/        # travel-time data (GeoJSON)
+docs/        # everything documentation related
 lib/         # vendored libraries (anime.js)
 archive/     # earlier versions of the prototype
 ```
@@ -102,8 +103,8 @@ archive/     # earlier versions of the prototype
 
 ## Credits
 
-- **Visualization & development:** viu:lab, HAW Hamburg
-- **Accessibility modelling:** g2lab, HafenCity Universität Hamburg
+- **Visualization & development:** [viu:lab, HAW Hamburg](https://viulab.haw-hamburg.de/) in cooperation with [Ekkehard Petzold](https://ekkehardpetzold.de/) 
+- **Accessibility modelling:** [g2lab, HafenCity Universität Hamburg](http://www.geomatik-hamburg.de/g2lab/)
 - **Funding:** mFUND, Federal Ministry for Digital and Transport (BMV)
 - **Map data:** © [MapTiler](https://www.maptiler.com/copyright/) © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)
 
