@@ -218,6 +218,30 @@
             max-width: min(292px, calc(100% - 24px));
         }
 
+        .section-info-tip--with-graphic {
+            width: min(292px, calc(100% - 24px));
+            max-width: min(292px, calc(100% - 24px));
+        }
+
+        .section-info-tip--with-graphic .section-info-tip-lead {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .section-info-tip--with-graphic .section-info-tip-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .section-info-tip--with-graphic .section-info-tip-graphic {
+            flex-shrink: 0;
+            width: 64px;
+            height: auto;
+            display: block;
+        }
+
         .section-info-tip strong {
             font-weight: 600;
         }
@@ -391,7 +415,7 @@
         #legend-container {
             position: absolute;
             right: 20px;
-            bottom: 28px;
+            bottom: 32px;
             z-index: 1;
             color: white;
             font-size: 12px;
@@ -534,7 +558,7 @@
                 left: 50%;
                 transform: translateX(-50%);
                 right: auto;
-                bottom: 56px;
+                bottom: 64px;
                 transition: bottom 0.3s ease;
                 z-index: 999;
             }
@@ -710,6 +734,14 @@
             border-left: 3px solid rgba(255, 255, 255, 0.25);
             padding-left: 14px;
             margin-bottom: 24px !important;
+        }
+
+        .splash-about-only {
+            display: none;
+        }
+
+        .splash-panel.splash-about-view .splash-about-only {
+            display: block;
         }
 
         .splash-panel a {
@@ -916,6 +948,9 @@
                     Erreichbarkeit von Arztstandorten besser abzuschätzen und sichtbar zu machen. Dazu wurden Fahrzeiten
                     modelliert, Unsicherheiten in den zugrunde liegenden Daten berücksichtigt und nutzerorientierte
                     Visualisierungen entwickelt und evaluiert.</p>
+                <p class="splash-about-only">MobiDoc-Demonstrator v1.1, ©2026 viu:lab, <a
+                        href="https://github.com/viulab-hh/mobiviz#license" target="_blank"
+                        rel="noopener noreferrer">MIT &amp; CC BY 4.0</a></p>
                 <button type="button" id="splash-continue">Weiter</button>
             </div>
             <div class="splash-scroll-indicator" id="splash-scroll-indicator" aria-hidden="true">
@@ -925,6 +960,20 @@
     </div>
     <script>
         (function () {
+            var SPLASH_WELCOME_TITLE = 'Willkommen beim MobiDoc-Demonstrator!';
+            var SPLASH_ABOUT_TITLE = 'MobiDoc-Demonstrator';
+
+            function setSplashView(mode) {
+                var panel = document.getElementById('splash-scroll-area');
+                var title = document.getElementById('splash-title');
+                var btn = document.getElementById('splash-continue');
+                if (!panel || !title || !btn) return;
+                var isAbout = mode === 'about';
+                panel.classList.toggle('splash-about-view', isAbout);
+                title.textContent = isAbout ? SPLASH_ABOUT_TITLE : SPLASH_WELCOME_TITLE;
+                btn.textContent = isAbout ? 'Fertig' : 'Weiter';
+            }
+
             function dismissSplash() {
                 document.documentElement.classList.add('splash-dismissed');
                 try {
@@ -949,6 +998,7 @@
             }
 
             function replaySplash() {
+                setSplashView('about');
                 document.documentElement.classList.remove('splash-dismissed');
                 var splashOv = document.getElementById('splash-overlay');
                 if (splashOv) splashOv.setAttribute('aria-hidden', 'false');
@@ -1012,6 +1062,7 @@
             window.addEventListener('resize', updateSplashScrollHint);
 
             if (!document.documentElement.classList.contains('splash-dismissed')) {
+                setSplashView('welcome');
                 requestAnimationFrame(function () {
                     requestAnimationFrame(function () {
                         var area = document.getElementById('splash-scroll-area');
@@ -1111,8 +1162,8 @@
                             Wählen Sie das Verkehrsmittel aus, für das die Fahrzeiten angezeigt werden sollen.</div>
                     </div>
                     <div class="tab-bar" data-group="travel">
-                        <button type="button" class="tab-button" data-value="car">Pkw</button>
                         <button type="button" class="tab-button" data-value="transit">ÖPNV</button>
+                        <button type="button" class="tab-button" data-value="car">PKW</button>
                     </div>
                 </div>
                 <div class="form-section">
@@ -1124,17 +1175,19 @@
                                 <i class="fas fa-circle-info" aria-hidden="true"></i>
                             </button>
                         </div>
-                        <div class="section-info-tip" id="tip-section-values" role="tooltip">
-                            Legen Sie fest, ob der typische Fall oder die Spannweite zwischen günstigem und ungünstigem
-                            Fall angezeigt wird.
+                        <div class="section-info-tip section-info-tip--with-graphic" id="tip-section-values" role="tooltip">
+                            <div class="section-info-tip-lead">
+                                <span class="section-info-tip-text">Legen Sie fest, ob der ty&shy;pi&shy;sche Fall oder die Spann&shy;weite zwi&shy;schen gün&shy;sti&shy;gem und un&shy;gün&shy;sti&shy;gem Fall an&shy;ge&shy;zeigt wird.</span>
+                                <img src="img/info-graphic-range.svg" alt="Grafik: Typischer Fall versus Spannweite" class="section-info-tip-graphic" width="118" height="91" decoding="async">
+                            </div>
                             <ul style="margin: 6px 0 0; padding-left: 16px;">
                                 <li><strong>Typischer Fall:</strong> Gehgeschwindigkeit 3,6 km/h, typische Ausfälle und
-                                    Verspätungen im ÖPNV, Pkw-Fahrzeiten ×1,5 (Hamburg) bzw. ×1,1 (Lüchow-Dannenberg)
+                                    Verspätungen im ÖPNV, PKW-Fahrzeiten ×1,5 (Hamburg) bzw. ×1,1 (Lüchow-Dannenberg)
                                     gegenüber freier Fahrt.</li>
                                 <li><strong>Günstiger Fall:</strong> Gehgeschwindigkeit 4,32 km/h, keine Ausfälle oder
-                                    Verspätungen, Pkw bei freier Fahrt.</li>
+                                    Verspätungen, PKW bei freier Fahrt.</li>
                                 <li><strong>Ungünstiger Fall:</strong> Gehgeschwindigkeit 2,88 km/h, mehr Ausfälle und
-                                    1,5-fache Verspätungen, Pkw ×2,0 bzw. ×1,2.</li>
+                                    1,5-fache Verspätungen, PKW ×2,0 bzw. ×1,2.</li>
                             </ul></div>
                     </div>
                     <div class="tab-bar" data-group="values">
@@ -1282,7 +1335,7 @@
             // Set active state as soon as possible
             function setActiveTabs() {
                 const currentData = params.get('data') || 'h'; // default to 'h'
-                const currentTravel = params.get('travel') || 'car'; // default to 'car'
+                const currentTravel = params.get('travel') || 'transit'; // default to 'transit'
                 const currentMode = params.get('mode') || 'nowNom'; // default to 'nowNom'
                 const currentWeighted = params.get('weighted') === 'true'; // default to false
                 const currentSpecialty = params.get('specialty') || 'hausaerzteErwachsene'; // default specialty
@@ -1410,11 +1463,11 @@
                         if (paramForm.classList.contains('drawer-open')) {
                             // Get the actual height of the drawer
                             const drawerHeight = paramForm.offsetHeight;
-                            // Position legend 8px above the drawer top
-                            legendContainer.style.bottom = (drawerHeight + 8) + 'px';
+                            // Position legend 16px above the drawer top
+                            legendContainer.style.bottom = (drawerHeight + 16) + 'px';
                         } else {
-                            // Position legend 8px above the collapsed drawer (48px handle + 8px gap)
-                            legendContainer.style.bottom = '56px';
+                            // Position legend 16px above the collapsed drawer (48px handle + 16px gap)
+                            legendContainer.style.bottom = '64px';
                         }
                     } else {
                         // Reset inline styles for desktop - let CSS take over
@@ -1685,7 +1738,7 @@
 
             function getCurrentTravel() {
                 const activeTravelTab = document.querySelector('.tab-bar[data-group="travel"] .tab-button.active');
-                return activeTravelTab ? activeTravelTab.dataset.value : 'car';
+                return activeTravelTab ? activeTravelTab.dataset.value : 'transit';
             }
 
             function getCurrentSpecialty() {
@@ -1707,11 +1760,28 @@
         window.mode = (searchParams.get('mode') || 'nowNom');
         // console.log("mode: ", window.mode);
         window.dataParam = (searchParams.get('data') || 'h');
-        window.travel = (searchParams.get('travel') || 'car');
+        window.travel = (searchParams.get('travel') || 'transit');
+        // Single-letter keys — keep in sync with data/python/shortening_rules.json
+        const PROP_KEYS = {
+            car: {
+                u: { '': 'a', Min: 'b', Max: 'c', '90': 'd', '80': 'e' },
+                w: { '': 'f', Min: 'g', Max: 'h', '90': 'i', '80': 'j' },
+            },
+            transit: {
+                u: { '': 'k', Min: 'l', Max: 'm', '90': 'n', '80': 'o' },
+                w: { '': 'p', Min: 'q', Max: 'r', '90': 's', '80': 't' },
+            },
+        };
         window.weighted = (searchParams.get('weighted') === 'true');
         window.specialty = (searchParams.get('specialty') || 'hausaerzteErwachsene');
 
         window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
+
+        const TIME_BREAKS = [15, 30, 45];
+        const MAX_TIME = 60;
+        // blue, blueish, reddish, red
+        const CLASS_COLORS = ['rgb(50, 165, 202)', 'rgb(106, 138, 161)', 'rgb(162, 112, 121)', 'rgb(218, 85, 80)'];
+        const UNREACHABLE_COLOR = 'rgb(255, 255, 255)';
 
         // Global function for updating weighted caption
         function updateWeightedCaption(isWeighted) {
@@ -1726,7 +1796,6 @@
             const legendContent = document.getElementById('legend-content');
             if (!legendContent) return;
 
-            const prettyBreaks = window.travel == 'transit' ? [15, 30, 45] : [5, 10, 15];
             const colorMin = [50, 165, 202]; // Blue
             const colorMax = [218, 85, 80];  // Red
             
@@ -1772,17 +1841,9 @@
                 `;
             } else if (window.weighted) {
                 // Weighted non-prognosis: discrete segments from blue to red
-                const numSegments = 4;
-                let segments = '';
-                
-                for (let i = 0; i < numSegments; i++) {
-                    const t = i / (numSegments - 1);
-                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
-                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
-                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
-                    const color = `rgb(${r}, ${g}, ${b})`;
-                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
-                }
+                const segments = CLASS_COLORS
+                    .map(color => `<div class="legend-segment" style="background: ${color};"></div>`)
+                    .join('');
                 
                 // Labels: niedrig (left), hoch (right)
                 const labels = `
@@ -1796,25 +1857,18 @@
                 `;
             } else {
                 // Unweighted: discrete segments with break labels
-                const numSegments = prettyBreaks.length + 1;
-                let segments = '';
-                let labels = '';
-                
-                for (let i = 0; i < numSegments; i++) {
-                    const t = i / prettyBreaks.length;
-                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
-                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
-                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
-                    const color = `rgb(${r}, ${g}, ${b})`;
-                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
-                }
+                const numSegments = CLASS_COLORS.length;
+                const segments = CLASS_COLORS
+                    .map(color => `<div class="legend-segment" style="background: ${color};"></div>`)
+                    .join('');
                 
                 // Labels at breaks between segments
-                for (let i = 0; i < prettyBreaks.length; i++) {
+                let labels = `<div class="legend-label left-aligned" style="left: 0;">0 min</div>`;
+                for (let i = 0; i < TIME_BREAKS.length; i++) {
                     const position = ((i + 1) / numSegments) * 100;
-                    labels += `<div class="legend-label" style="left: ${position}%;">${prettyBreaks[i]} min</div>`;
+                    labels += `<div class="legend-label" style="left: ${position}%;">${TIME_BREAKS[i]} min</div>`;
                 }
-                labels += `<div class="legend-label right-aligned" style="left: 100%;">60 min</div>`;
+                labels += `<div class="legend-label right-aligned" style="left: 100%;">${MAX_TIME} min</div>`;
                 
                 legendContent.innerHTML = `
                     <div class="legend-bar">${segments}</div>
@@ -1933,8 +1987,7 @@
                 // console.log('Positive quantiles (increases):', positiveQuantiles);
                 // console.log('Negative quantiles (decreases):', negativeQuantiles);
             } else {
-                const prettyBreaks = window.travel == 'transit' ? [15, 30, 45] : [5, 10, 15];
-                combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
+                combinedQuantiles = window.weighted ? quantiles(allVals) : TIME_BREAKS;
                 // console.log('Quantiles:', combinedQuantiles);
             }
 
@@ -2060,7 +2113,7 @@
             
             // Cells without a practice within 60 min should always be white
             if (isNaN(value)) {
-                return 'rgb(255, 255, 255)';
+                return UNREACHABLE_COLOR;
             }
 
             if (window.prognosis) {
@@ -2139,45 +2192,13 @@
                     }
                 }
             }
-            else {
-                colorMin = [50, 165, 202];
-                colorMax = [218, 85, 80];
-            }
 
-            // Standard threshold-based interpolation
-            // For non-prognosis: we have numSegments = useThresholds.length + 1 color segments
-            // Segment 0: 0 to threshold[0]
-            // Segment 1: threshold[0] to threshold[1]
-            // ...
-            // Last segment: threshold[n-1] to infinity
-            
-            const numSegments = useThresholds.length + 1;
-            
-            // Handle values below the minimum threshold (first segment)
-            if (value <= useThresholds[0]) {
-                // Linear interpolation from 0 to threshold[0]
-                const segmentT = value / useThresholds[0];
-                const overallT = segmentT / numSegments;
-                const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
-                const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
-                const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
-                return `rgb(${r}, ${g}, ${b})`;
+            // Discrete classes: (0, t0], (t0, t1], ..., (tn-1, MAX_TIME]; beyond MAX_TIME is unreachable
+            if (!window.weighted && value > MAX_TIME) {
+                return UNREACHABLE_COLOR;
             }
-            
-            // Interpolate between thresholds
-            for (let i = 0; i < useThresholds.length - 1; i++) {
-                if (value <= useThresholds[i + 1]) {
-                    // Value is between useThresholds[i] and useThresholds[i+1]
-                    const segmentT = (value - useThresholds[i]) / (useThresholds[i + 1] - useThresholds[i]);
-                    const overallT = (i + 1 + segmentT) / numSegments;
-                    const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
-                    const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
-                    const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
-                    return `rgb(${r}, ${g}, ${b})`;
-                }
-            }
-            // Value is above the highest threshold (last segment)
-            return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
+            const classIndex = useThresholds.findIndex(th => value <= th);
+            return CLASS_COLORS[classIndex === -1 ? CLASS_COLORS.length - 1 : Math.min(classIndex, CLASS_COLORS.length - 1)];
         };
 
         const makeHexPolygon = ([centerLon, centerLat], scale = 1) => {
@@ -2194,38 +2215,31 @@
         };
 
         const properties = (prop, mode, weighted = false) => {
-            // Values of the selected travel mode (car_..., transit_...), empty values (null) as NaN
-            const values = {};
-            Object.keys(prop).forEach(key => {
-                if (key.startsWith(window.travel + '_')) {
-                    values[key.replace(window.travel + '_', '')] = prop[key] === null ? NaN : prop[key];
-                }
-            });
-            prop = values;
+            const travelKeys = PROP_KEYS[window.travel] || PROP_KEYS.car;
+            const keyMap = travelKeys[weighted ? 'w' : 'u'];
+            const timeMap = travelKeys.u;
+            const suffixes = ['', 'Min', 'Max', '90', '80'];
 
-            // No practice within 60 min (Zumutbarkeitsschwelle): not reachable, also for the person-minutes (EwM_22_..., EwM_40_...)
-            Object.keys(prop).forEach(key => {
-                if (!(prop[key.replace(/EwM_\d\d_/, 't')] <= 60)) prop[key] = NaN;
+            const read = (map, suffix) => {
+                const v = prop[map[suffix]];
+                return v === null || v === undefined ? NaN : v;
+            };
+
+            // No practice within 60 min (Zumutbarkeitsschwelle)
+            suffixes.forEach(suffix => {
+                const threshold = read(timeMap, suffix);
+                if (!(threshold <= 60)) prop[keyMap[suffix]] = NaN;
             });
 
             switch (mode) {
                 case 'nowNom':
-                    return weighted ?
-                        [prop.EwM_22_Nom_100pctDocs, prop.EwM_22_Max_100pctDocs] :
-                        [prop.tNom_100pctDocs, prop.tMax_100pctDocs];
+                    return [read(keyMap, ''), read(keyMap, 'Max')];
                 case 'nowMinMax':
-                    return weighted ?
-                        [prop.EwM_22_Min_100pctDocs, prop.EwM_22_Max_100pctDocs] :
-                        [prop.tMin_100pctDocs, prop.tMax_100pctDocs];
+                    return [read(keyMap, 'Min'), read(keyMap, 'Max')];
                 case 'progNom10':
-                    return weighted ?
-                        [prop.EwM_40_Nom_090pctDocs - prop.EwM_22_Nom_100pctDocs] :
-                        [prop.tNom_090pctDocs - prop.tNom_100pctDocs];
+                    return [read(keyMap, '90') - read(keyMap, '')];
                 case 'progNom20':
-                    return weighted ?
-                        // [prop.EwM_22_Nom_100pctDocs * (1 + prop.EwM_22_40_Nom_080pctDocs_diff/100)] : 
-                        [prop.EwM_40_Nom_080pctDocs - prop.EwM_22_Nom_100pctDocs] :
-                        [prop.tNom_080pctDocs - prop.tNom_100pctDocs];
+                    return [read(keyMap, '80') - read(keyMap, '')];
                 default:
                     return [];
             }

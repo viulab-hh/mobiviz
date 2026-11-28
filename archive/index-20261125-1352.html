@@ -1,0 +1,2300 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <script>
+        try {
+            if (sessionStorage.getItem('mobidocSplashDismissed') === '1') {
+                document.documentElement.classList.add('splash-dismissed');
+            }
+        } catch (e) { /* ignore */ }
+    </script>
+    <meta charset="UTF-8" />
+    <title>MapLibre 2D/2.5D Transition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <!-- Fonts -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans&display=swap" rel="stylesheet"> -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: black;
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            /* font-family: 'Plus Jakarta Sans', sans-serif; */
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .buttons-tl,
+        #param-form {
+            position: absolute;
+            left: 20px;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .buttons-tl {
+            top: 20px;
+        }
+
+        #param-form {
+            bottom: 20px;
+            /* background: white; */
+            padding: 16px 32px 24px;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+
+        button {
+            padding: 12px 16px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 20px;
+            border: none;
+            color: #333;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button,
+        #param-form,
+        .maplibregl-ctrl {
+            color: white;
+            backdrop-filter: blur(24px);
+            background: rgba(20, 20, 25, 0.4);
+        }
+
+        .mapboxgl-ctrl-top-right .mapboxgl-ctrl,
+        .mapboxgl-ctrl-top-left .mapboxgl-ctrl {
+            margin: 20px;
+        }
+
+        .mapboxgl-ctrl-bottom-left .mapboxgl-ctrl,
+        .mapboxgl-ctrl-bottom-right .mapboxgl-ctrl {
+            margin: 0;
+        }
+
+        .mapboxgl-ctrl-group button+button {
+            border-top: 0px;
+            color: #fff !important;
+        }
+
+        button.mapboxgl-ctrl-zoom-in span.maplibregl-ctrl-icon {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23fff'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5z'/%3E%3C/svg%3E") !important;
+        }
+
+        button.mapboxgl-ctrl-zoom-out span.maplibregl-ctrl-icon {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23fff'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-9z'/%3E%3C/svg%3E") !important;
+        }
+
+        button.mapboxgl-ctrl-compass span.maplibregl-ctrl-icon {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23da5550'%3E%3Cpath d='m10.5 14 4-8 4 8h-8z'/%3E%3Cpath d='m10.5 16 4 8 4-8h-8z' fill='%23ddd'/%3E%3C/svg%3E") !important;
+        }
+
+        label {
+            display: block;
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-section-heading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+        }
+
+        .form-section-heading .form-section-title {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .form-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-section-title i {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .section-info {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .section-info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            margin: 0;
+            border: none;
+            border-radius: 6px;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            color: rgba(255, 255, 255, 0.62) !important;
+            cursor: pointer;
+            box-shadow: none !important;
+        }
+
+        .section-info-btn:hover {
+            color: rgba(255, 255, 255, 0.95) !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .section-info-btn:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.45);
+            outline-offset: 2px;
+            color: #fff !important;
+        }
+
+        .section-info-btn i {
+            font-size: 15px;
+            opacity: 1;
+            pointer-events: none;
+        }
+
+        .section-info-tip {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: max-content;
+            max-width: min(292px, calc(100vw - 40px));
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.45;
+            color: rgba(255, 255, 255, 0.96);
+            background: rgba(42, 42, 44, 0.98);
+            border-radius: 8px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+            z-index: 10050;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+            pointer-events: none;
+            overflow-wrap: break-word;
+        }
+
+        /* Inset from panel edges (tooltip anchored to full heading row, not only the icon) */
+        #param-form .form-section-heading .section-info-tip {
+            left: 12px;
+            right: auto;
+            max-width: min(292px, calc(100% - 24px));
+        }
+
+        .section-info-tip--with-graphic {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            width: min(292px, calc(100% - 24px));
+            max-width: min(292px, calc(100% - 24px));
+        }
+
+        .section-info-tip--with-graphic .section-info-tip-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .section-info-tip--with-graphic .section-info-tip-graphic {
+            flex-shrink: 0;
+            width: 64px;
+            height: auto;
+            display: block;
+        }
+
+        .section-info-tip strong {
+            font-weight: 600;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+
+            #param-form .form-section-heading:has(.section-info:hover) .section-info-tip,
+            #param-form .form-section-heading:has(.section-info-btn:focus-visible) .section-info-tip {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+        }
+
+        #param-form .form-section-heading:has(.section-info.is-open) .section-info-tip {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .section-info-tip {
+                transition: none;
+            }
+        }
+
+        .tab-bar {
+            display: flex;
+            background: rgba(40, 40, 45, 0.6);
+            border-radius: 6px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .tab-button.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-weight: 500;
+        }
+
+        .switch-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .switch-row .switch-caption {
+            margin-top: 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.88);
+            line-height: 1.35;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        p {
+            margin-block: 4px;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            font-size: 16px;
+            border: none;
+            color: white;
+            background: rgba(40, 40, 45, 0.8);
+            cursor: pointer;
+            border-radius: 6px;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        select:focus {
+            outline: 2px solid rgba(255, 255, 255, 0.5);
+            outline-offset: 2px;
+        }
+
+        select option {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        /* Navigation +/- / compass: match param-form glass; cluster radius matches generic buttons (pitchButton = 4px) */
+        .maplibregl-ctrl-group.maplibregl-ctrl,
+        .mapboxgl-ctrl-group.mapboxgl-ctrl {
+            background: rgba(20, 20, 25, 0.4) !important;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: none !important;
+        }
+
+        .maplibregl-ctrl-group button,
+        .mapboxgl-ctrl-group button {
+            width: 36px !important;
+            height: 36px !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+        }
+
+        #legend-container {
+            position: absolute;
+            right: 20px;
+            bottom: 28px;
+            z-index: 1;
+            color: white;
+            font-size: 12px;
+            left: auto;
+            transform: none;
+        }
+
+        .legend-title {
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 6px;
+            opacity: 0.9;
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .legend-bar {
+            display: flex;
+            height: 8px;
+            width: 300px;
+            position: relative;
+        }
+
+        .legend-segment {
+            flex: 1;
+        }
+
+        .legend-segment:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+
+        .legend-segment:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+
+        .legend-labels {
+            position: relative;
+            height: 20px;
+            margin-top: 4px;
+        }
+
+        .legend-label {
+            position: absolute;
+            font-size: 12px;
+            color: white;
+            white-space: nowrap;
+            transform: translateX(-50%);
+            text-shadow: 
+                -1px -1px 0 #000,
+                1px -1px 0 #000,
+                -1px 1px 0 #000,
+                1px 1px 0 #000,
+                0 0 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .legend-label.left-aligned {
+            transform: translateX(0);
+        }
+
+        .legend-label.right-aligned {
+            transform: translateX(-100%);
+        }
+
+        /* Drawer handle for mobile */
+        #drawer-handle {
+            display: none;
+        }
+
+        /* Mobile responsive styles */
+        @media screen and (max-width: 768px) {
+            #param-form {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                margin: 0;
+                border-radius: 16px 16px 0 0;
+                padding: 48px 20px 20px;
+                max-height: 80vh;
+                overflow-x: hidden;
+                overflow-y: auto;
+                transform: translateY(calc(100% - 48px));
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+
+            #param-form.drawer-open {
+                transform: translateY(0);
+            }
+
+            #drawer-handle {
+                display: flex;
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 48px;
+                justify-content: center;
+                align-items: center;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            #drawer-handle::before {
+                content: '';
+                width: 40px;
+                height: 4px;
+                background: rgba(255, 255, 255, 0.4);
+                border-radius: 2px;
+            }
+
+            #legend-container {
+                position: fixed;
+                left: 50%;
+                transform: translateX(-50%);
+                right: auto;
+                bottom: 56px;
+                transition: bottom 0.3s ease;
+                z-index: 999;
+            }
+
+            button {
+                padding: 10px 14px;
+                font-size: 18px;
+            }
+        }
+
+        /* Desktop: stable panel width (region switch changes specialty option text lengths) */
+        @media screen and (min-width: 769px) {
+            #param-form {
+                box-sizing: border-box;
+                width: 360px;
+                max-width: calc(100vw - 48px);
+            }
+        }
+
+        /* Very small screens */
+        @media screen and (max-width: 480px) {
+            #param-form {
+                padding: 48px 16px 16px;
+            }
+
+            .form-section-title {
+                font-size: 14px;
+            }
+
+            .tab-button {
+                padding: 6px 8px;
+                font-size: 13px;
+            }
+
+            select {
+                font-size: 14px;
+                padding: 8px 10px;
+            }
+
+            .legend-bar {
+                width: 250px;
+            }
+        }
+
+        .param-form-footer {
+            margin: 16px 0 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 12px 20px;
+            text-align: center;
+        }
+
+        .param-form-footer-btn {
+            display: inline-block;
+            width: auto;
+            max-width: 100%;
+            padding: 0;
+            margin: 0;
+            border: none;
+            border-radius: 0;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none !important;
+            color: rgba(255, 255, 255, 0.72) !important;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.4;
+            text-align: center;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            cursor: pointer;
+            vertical-align: baseline;
+        }
+
+        .param-form-footer-btn:hover {
+            color: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        .param-form-footer-btn:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.45);
+            outline-offset: 3px;
+            border-radius: 2px;
+        }
+
+        /* Welcome splash */
+        #splash-overlay,
+        #data-info-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: opacity 0.28s ease, visibility 0.28s ease;
+        }
+
+        #splash-overlay {
+            z-index: 10001;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #data-info-overlay {
+            z-index: 10002;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        #data-info-overlay.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        html.splash-dismissed #splash-overlay {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            #splash-overlay,
+            #data-info-overlay {
+                transition: none;
+            }
+        }
+
+        .splash-panel {
+            box-sizing: border-box;
+            width: 100%;
+            max-height: min(90vh, 720px);
+            overflow-y: auto;
+            padding: 32px 36px 36px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 16px;
+            line-height: 1.55;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            background: rgba(46, 46, 46, 0.97);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+        }
+
+        .splash-panel h1 {
+            margin: 0 0 26px;
+            font-size: 1.45rem;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+
+        .splash-panel p {
+            margin: 0 0 20px;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .splash-panel p:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .splash-disclaimer {
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            border-left: 3px solid rgba(255, 255, 255, 0.25);
+            padding-left: 14px;
+            margin-bottom: 24px !important;
+        }
+
+        .splash-panel a {
+            color: #9fd4ff;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .splash-panel a:hover {
+            color: #c8e7ff;
+        }
+
+        .splash-panel-link {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .splash-shell {
+            position: relative;
+            box-sizing: border-box;
+            width: min(calc(560px + 36px * 2), 100%);
+            flex: 0 1 auto;
+            min-width: 0;
+        }
+
+        #splash-continue {
+            display: block;
+            margin-top: 24px;
+            margin-left: auto;
+            margin-right: auto;
+            width: fit-content;
+            max-width: 100%;
+            padding: 14px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
+            color: #222 !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none;
+        }
+
+        #splash-continue:hover {
+            background: #fff !important;
+            color: #222 !important;
+        }
+
+        #splash-continue:focus-visible {
+            outline: 2px solid rgba(159, 212, 255, 0.9);
+            outline-offset: 3px;
+        }
+
+        .data-info-panel {
+            position: relative;
+            padding-top: 44px;
+        }
+
+        .data-info-close-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 2;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            margin: 0;
+            border: none;
+            border-radius: 8px;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: none !important;
+            color: rgba(255, 255, 255, 0.82) !important;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .data-info-close-btn:hover {
+            color: #fff !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .data-info-close-btn:focus-visible {
+            outline: 2px solid rgba(159, 212, 255, 0.9);
+            outline-offset: 2px;
+        }
+
+        .data-info-close-btn i {
+            font-size: 18px;
+            pointer-events: none;
+        }
+
+        .data-info-panel h1 {
+            padding-right: 48px;
+        }
+
+        .splash-scroll-indicator {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 52px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 12px;
+            pointer-events: none;
+            border-radius: 0 0 12px 12px;
+            background: linear-gradient(to top,
+                    rgba(46, 46, 46, 0.97) 25%,
+                    rgba(46, 46, 46, 0) 100%);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.22s ease, visibility 0.22s ease;
+        }
+
+        .splash-scroll-indicator.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .splash-scroll-indicator i {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.65);
+            animation: splash-scroll-nudge 1.35s ease-in-out infinite;
+        }
+
+        @keyframes splash-scroll-nudge {
+
+            0%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.65;
+            }
+
+            50% {
+                transform: translateY(5px);
+                opacity: 1;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .splash-scroll-indicator i {
+                animation: none;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .splash-shell {
+                width: min(calc(560px + 24px * 2), 100%);
+            }
+
+            .splash-panel {
+                padding: 26px 24px 28px;
+                font-size: 15px;
+            }
+
+            .splash-panel h1 {
+                font-size: 1.25rem;
+            }
+
+            .data-info-panel {
+                padding-top: 40px;
+            }
+
+            .data-info-close-btn {
+                top: 10px;
+                right: 10px;
+                width: 36px;
+                height: 36px;
+            }
+
+            .data-info-close-btn i {
+                font-size: 16px;
+            }
+
+            .data-info-panel h1 {
+                padding-right: 42px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="splash-overlay" role="dialog" aria-modal="true" aria-labelledby="splash-title">
+        <div class="splash-shell">
+            <div class="splash-panel" id="splash-scroll-area">
+                <h1 id="splash-title">Willkommen beim MobiDoc-Demonstrator!</h1>
+                <p>Der Demonstrator zeigt modellierte Erreichbarkeiten von Arztstandorten in Form von Fahrzeiten in Minuten.
+                    Für verschiedene Fachrichtungen können Erreichbarkeiten in Hamburg und Lüchow-Dannenberg sowie die
+                    mögliche Schwankung dieser Werte dargestellt werden.</p>
+                <p class="splash-disclaimer">Bitte beachten: Die Anwendung bietet keine individuelle Auskunft für
+                    Patient*innen zu konkreten Fahrtzeiten, sondern kann als ein Kriterium für die Einschätzung regionaler
+                    Unterschiede in der Versorgung dienen.</p>
+                <p>Der Demonstrator und die zugrundeliegenden Daten sind im Projekt MobiDoc (<a
+                        href="https://www.bmv.de/SharedDocs/DE/Artikel/mFUND/Projekte/mobidoc.html" target="_blank"
+                        rel="noopener noreferrer">Erweiterte raumzeitliche Modellierung und Simulation zur Erreichbarkeit
+                        medizinischer Einrichtungen</a>) entstanden, das sich mit der erweiterten Analyse der Erreichbarkeit
+                    medizinischer Versorgung befasst hat. Ziel des Projekts war es, räumliche und zeitliche Unterschiede in der
+                    Erreichbarkeit von Arztstandorten besser abzuschätzen und sichtbar zu machen. Dazu wurden Fahrzeiten
+                    modelliert, Unsicherheiten in den zugrunde liegenden Daten berücksichtigt und nutzerorientierte
+                    Visualisierungen entwickelt und evaluiert.</p>
+                <button type="button" id="splash-continue">Weiter</button>
+            </div>
+            <div class="splash-scroll-indicator" id="splash-scroll-indicator" aria-hidden="true">
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            function dismissSplash() {
+                document.documentElement.classList.add('splash-dismissed');
+                try {
+                    sessionStorage.setItem('mobidocSplashDismissed', '1');
+                } catch (e) { /* ignore */ }
+                var overlay = document.getElementById('splash-overlay');
+                if (overlay) overlay.setAttribute('aria-hidden', 'true');
+            }
+
+            function updateSplashScrollHint() {
+                var panel = document.getElementById('splash-scroll-area');
+                var hint = document.getElementById('splash-scroll-indicator');
+                if (!panel || !hint) return;
+                if (document.documentElement.classList.contains('splash-dismissed')) {
+                    hint.classList.remove('is-visible');
+                    return;
+                }
+                var slack = 8;
+                var canScrollDown = panel.scrollHeight > panel.clientHeight + slack;
+                var atBottom = panel.scrollTop >= panel.scrollHeight - panel.clientHeight - slack;
+                hint.classList.toggle('is-visible', canScrollDown && !atBottom);
+            }
+
+            function replaySplash() {
+                document.documentElement.classList.remove('splash-dismissed');
+                var splashOv = document.getElementById('splash-overlay');
+                if (splashOv) splashOv.setAttribute('aria-hidden', 'false');
+
+                var dataOv = document.getElementById('data-info-overlay');
+                if (dataOv && dataOv.classList.contains('is-open')) {
+                    dataOv.classList.remove('is-open');
+                    dataOv.setAttribute('aria-hidden', 'true');
+                }
+
+                document.querySelectorAll('#param-form .section-info.is-open').forEach(function (wrap) {
+                    wrap.classList.remove('is-open');
+                    var b = wrap.querySelector('.section-info-btn');
+                    if (b) b.setAttribute('aria-expanded', 'false');
+                });
+
+                var area = document.getElementById('splash-scroll-area');
+                if (area) area.scrollTop = 0;
+                updateSplashScrollHint();
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        updateSplashScrollHint();
+                        var wb = document.getElementById('splash-continue');
+                        if (wb) wb.focus({ preventScroll: true });
+                    });
+                });
+            }
+
+            function attachSplashReplayBtn() {
+                var replayBtn = document.getElementById('splashReplayBtn');
+                if (!replayBtn) return;
+                replayBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    replaySplash();
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', attachSplashReplayBtn);
+            } else {
+                attachSplashReplayBtn();
+            }
+
+            var btn = document.getElementById('splash-continue');
+            if (btn) btn.addEventListener('click', dismissSplash);
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !document.documentElement.classList.contains('splash-dismissed')) {
+                    dismissSplash();
+                }
+            });
+
+            var scrollArea = document.getElementById('splash-scroll-area');
+            if (scrollArea) {
+                scrollArea.addEventListener('scroll', updateSplashScrollHint, { passive: true });
+                if (typeof ResizeObserver !== 'undefined') {
+                    var ro = new ResizeObserver(updateSplashScrollHint);
+                    ro.observe(scrollArea);
+                }
+            }
+            window.addEventListener('resize', updateSplashScrollHint);
+
+            if (!document.documentElement.classList.contains('splash-dismissed')) {
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        var area = document.getElementById('splash-scroll-area');
+                        if (area) area.scrollTop = 0;
+                        updateSplashScrollHint();
+                        var b = document.getElementById('splash-continue');
+                        if (b) b.focus({ preventScroll: true });
+                    });
+                });
+            } else {
+                var overlayDone = document.getElementById('splash-overlay');
+                if (overlayDone) overlayDone.setAttribute('aria-hidden', 'true');
+            }
+        })();
+    </script>
+
+    <div id="data-info-overlay" role="dialog" aria-modal="true" aria-labelledby="data-info-title" aria-hidden="true">
+        <div class="splash-shell">
+            <div class="splash-panel data-info-panel" id="data-info-scroll-area">
+                <button type="button" id="data-info-close" class="data-info-close-btn" aria-label="Schließen">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+                <h1 id="data-info-title">Information zu den Daten</h1>
+                <p>Die dargestellten Erreichbarkeiten beruhen auf modellierten Fahrzeiten zu Arztstandorten. Grundlagen sind ein manuell zusammengestellter Datensatz zu Arztstandorten, OpenStreetMap-Straßennetzdaten sowie GTFS-Daten (DELFI). Ausgangspunkte der Analyse sind 100-m-Gitterzellen des Zensus 2022, deren Bevölkerungszahl in die Berechnungen einfließt. Die Berechnungen wurden in Python mit r5py durchgeführt. Angezeigt werden mittlere modellierte Fahrzeiten sowie optional wahrscheinliche Schwankungsbereiche. (Berechnung: g2lab, HafenCity Universität Hamburg <a id="data-info-external-link" class="splash-panel-link" href="https://www.geomatik-hamburg.de/g2lab/" target="_blank"                     rel="noopener noreferrer">http://www.geomatik-hamburg.de/g2lab/</a>)</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="buttons-tl">
+        <button id="pitchButton" onclick="pitchButtonPressed()">2D</button>
+    </div>
+
+    <div id="param-form">
+        <div id="drawer-handle"></div>
+        <form id="paramForm">
+            <div class="form-container">
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-map-marker-alt"></i> Region</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Region"
+                                aria-expanded="false" aria-controls="tip-section-ort">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-ort" role="tooltip">
+                            Wählen Sie die Region aus, für die Daten angezeigt werden sollen.</div>
+                    </div>
+                    <div class="tab-bar" data-group="data">
+                        <button type="button" class="tab-button" data-value="h">Hamburg</button>
+                        <button type="button" class="tab-button" data-value="l">Lüchow</button>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-bus"></i> Transportmodus</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Transportmodus"
+                                aria-expanded="false" aria-controls="tip-section-transport">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-transport" role="tooltip">
+                            Wählen Sie, ob Erreichbarkeiten mit dem PKW oder dem Öffentlichen Personennahverkehr (ÖPNV) berechnet werden.</div>
+                    </div>
+                    <div class="tab-bar" data-group="transport">
+                        <button type="button" class="tab-button" data-value="transit">ÖPNV</button>
+                        <button type="button" class="tab-button" data-value="car">PKW</button>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-user-doctor"></i> Fachrichtung</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Fachrichtung"
+                                aria-expanded="false" aria-controls="tip-section-specialty">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-specialty" role="tooltip">
+                            Wählen Sie die Fachrichtung aus, deren Erreichbarkeit dargestellt werden soll.</div>
+                    </div>
+                    <select id="specialtySelect">
+                        <option value="hausaerzteErwachsene">Hausärzte (Erwachsene)</option>
+                        <option value="hausaerzteKinder">Hausärzte (Kinder)</option>
+                        <option value="anaesthesie">Anästhesie</option>
+                        <option value="augenaerzte">Augenärzte</option>
+                        <option value="chirurgie">Chirurgie</option>
+                        <option value="fachaerztlicheKindermedizin">Fachärztliche Kindermedizin</option>
+                        <option value="frauenheilkunde">Frauenheilkunde</option>
+                        <option value="hautaerzte">Hautärzte</option>
+                        <option value="hnoaerzte">HNO-Ärzte</option>
+                        <option value="innereMedizin">Innere Medizin</option>
+                        <option value="laborMedizin">Labormedizin</option>
+                        <option value="neurologiePsychiatrie">Neurologie/Psychiatrie</option>
+                        <option value="pathologie">Pathologie</option>
+                        <option value="radiologie">Radiologie</option>
+                        <option value="sonderfaecher">Sonderfächer</option>
+                        <option value="sonstige">Sonstige</option>
+                        <option value="strahlentherapieNuklearmedizin">Strahlentherapie/Nuklearmedizin</option>
+                        <option value="urologen">Urologen</option>
+                    </select>
+                </div>
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-chart-simple"></i> Erreichbarkeitswerte</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Erreichbarkeitswerte"
+                                aria-expanded="false" aria-controls="tip-section-values">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip section-info-tip--with-graphic" id="tip-section-values" role="tooltip">
+                            <span class="section-info-tip-text">Legen Sie fest, ob nur Mittelwerte oder Minima und Maxima angezeigt werden.</span>
+                            <img src="img/info-graphic-min-max.svg" alt="Grafik: Mittelwert versus Minimum und Maximum" class="section-info-tip-graphic" width="118" height="93" decoding="async">
+                        </div>
+                    </div>
+                    <div class="tab-bar" data-group="values">
+                        <button type="button" class="tab-button" data-value="nowNom">Mittelwerte</button>
+                        <button type="button" class="tab-button" data-value="nowMinMax">Minima/Maxima</button>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-arrow-trend-up"></i> Zukunftsszenario</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Zukunftsszenario"
+                                aria-expanded="false" aria-controls="tip-section-prognosis">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-prognosis" role="tooltip">
+                            Zeigen Sie die Erreichbarkeit für Szenarien mit 10&nbsp;% oder 20&nbsp;% weniger Fachärzt*innen.</div>
+                    </div>
+                    <div class="tab-bar" data-group="prognosis">
+                        <button type="button" class="tab-button" data-value="off">Off</button>
+                        <button type="button" class="tab-button" data-value="progNom10">-10%</button>
+                        <button type="button" class="tab-button" data-value="progNom20">-20%</button>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <div class="form-section-heading">
+                        <h3 class="form-section-title"><i class="fas fa-users-viewfinder"></i> Gewichtet nach Bevölkerung</h3>
+                        <div class="section-info">
+                            <button type="button" class="section-info-btn" aria-label="Info: Gewichtet nach Bevölkerung"
+                                aria-expanded="false" aria-controls="tip-section-weighted">
+                                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="section-info-tip" id="tip-section-weighted" role="tooltip">
+                            Berücksichtigt die Anzahl der Bewohner*innen je Zelle bei der Auswertung der Fahrtzeiten.</div>
+                    </div>
+                    <div class="switch-row">
+                        <label class="switch">
+                            <input type="checkbox" id="weightedSwitch">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="switch-caption" id="weightedCaption">Zeit in Minuten</span>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <p class="param-form-footer">
+            <button type="button" class="param-form-footer-btn" id="splashReplayBtn"
+                aria-haspopup="dialog" aria-controls="splash-overlay">Über den Demonstrator</button>
+            <button type="button" class="param-form-footer-btn" id="dataInfoOpenBtn"
+                aria-haspopup="dialog" aria-controls="data-info-overlay">Über die Daten</button>
+        </p>
+    </div>
+
+    <script>
+        (function () {
+            var overlay = document.getElementById('data-info-overlay');
+            var openBtn = document.getElementById('dataInfoOpenBtn');
+            var closeBtn = document.getElementById('data-info-close');
+            if (!overlay || !openBtn || !closeBtn) return;
+
+            function closeAllFormTips() {
+                document.querySelectorAll('#param-form .section-info.is-open').forEach(function (wrap) {
+                    wrap.classList.remove('is-open');
+                    var b = wrap.querySelector('.section-info-btn');
+                    if (b) b.setAttribute('aria-expanded', 'false');
+                });
+            }
+
+            function openDataInfo() {
+                closeAllFormTips();
+                overlay.classList.add('is-open');
+                overlay.setAttribute('aria-hidden', 'false');
+                var area = document.getElementById('data-info-scroll-area');
+                if (area) area.scrollTop = 0;
+                closeBtn.focus({ preventScroll: true });
+            }
+
+            function closeDataInfo() {
+                overlay.classList.remove('is-open');
+                overlay.setAttribute('aria-hidden', 'true');
+                openBtn.focus({ preventScroll: true });
+            }
+
+            openBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openDataInfo();
+            });
+            closeBtn.addEventListener('click', closeDataInfo);
+            overlay.addEventListener('click', function (e) {
+                var panel = overlay.querySelector('.splash-panel');
+                if (panel && panel.contains(e.target)) return;
+                closeDataInfo();
+            });
+
+            var externalLink = document.getElementById('data-info-external-link');
+            if (externalLink) {
+                externalLink.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                });
+            }
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'Escape' || !overlay.classList.contains('is-open')) return;
+                closeDataInfo();
+                e.preventDefault();
+                e.stopPropagation();
+            }, true);
+        })();
+    </script>
+
+    <div id="legend-container">
+        <div class="legend-title">Erreichbarkeit</div>
+        <div id="legend-content"></div>
+    </div>
+
+    <script>
+        // Set active tabs immediately to prevent flicker
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+
+            // Map mode to values and prognosis tabs
+            function mapModeToTabs(mode) {
+                const values = {
+                    'nowNom': 'nowNom',
+                    'nowMinMax': 'nowMinMax',
+                    'progNom10': 'nowNom', // Prognosis forces Average
+                    'progNom20': 'nowNom'  // Prognosis forces Average
+                };
+
+                const prognosis = {
+                    'nowNom': 'off',
+                    'nowMinMax': 'off',
+                    'progNom10': 'progNom10',
+                    'progNom20': 'progNom20'
+                };
+
+                return {
+                    values: values[mode] || 'nowNom',
+                    prognosis: prognosis[mode] || 'off'
+                };
+            }
+
+            // Set active state as soon as possible
+            function setActiveTabs() {
+                const currentData = params.get('data') || 'h'; // default to 'h'
+                const currentMode = params.get('mode') || 'nowNom'; // default to 'nowNom'
+                const currentWeighted = params.get('weighted') === 'true'; // default to false
+                const currentSpecialty = params.get('specialty') || 'hausaerzteErwachsene'; // default specialty
+                const currentTransport = params.get('transport') || 'transit';
+                const tabMapping = mapModeToTabs(currentMode);
+
+                // Set data tab active
+                const dataTab = document.querySelector(`.tab-bar[data-group="data"] .tab-button[data-value="${currentData}"]`);
+                if (dataTab) {
+                    document.querySelectorAll('.tab-bar[data-group="data"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    dataTab.classList.add('active');
+                }
+
+                // Set transport tab active
+                const transportTab = document.querySelector(`.tab-bar[data-group="transport"] .tab-button[data-value="${currentTransport}"]`);
+                if (transportTab) {
+                    document.querySelectorAll('.tab-bar[data-group="transport"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    transportTab.classList.add('active');
+                }
+
+                // Set specialty select
+                const specialtySelect = document.getElementById('specialtySelect');
+                if (specialtySelect) {
+                    specialtySelect.value = currentSpecialty;
+                }
+
+                // Update specialty options based on current location (must be called after DOM is ready)
+                if (typeof updateSpecialtyOptions === 'function') {
+                    updateSpecialtyOptions(currentData);
+                }
+
+                // Set weighted switch
+                const weightedSwitch = document.getElementById('weightedSwitch');
+                if (weightedSwitch) {
+                    weightedSwitch.checked = currentWeighted;
+                    if (typeof updateWeightedCaption === 'function') {
+                        updateWeightedCaption(currentWeighted);
+                    }
+                }
+
+                // Set values tab active
+                const valuesTab = document.querySelector(`.tab-bar[data-group="values"] .tab-button[data-value="${tabMapping.values}"]`);
+                if (valuesTab) {
+                    document.querySelectorAll('.tab-bar[data-group="values"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    valuesTab.classList.add('active');
+                }
+
+                // Set prognosis tab active
+                const prognosisTab = document.querySelector(`.tab-bar[data-group="prognosis"] .tab-button[data-value="${tabMapping.prognosis}"]`);
+                if (prognosisTab) {
+                    document.querySelectorAll('.tab-bar[data-group="prognosis"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    prognosisTab.classList.add('active');
+                }
+            }
+
+
+            // Try to set immediately if DOM is ready, otherwise wait
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    setActiveTabs();
+                    if (typeof updateLegend === 'function') {
+                        updateLegend();
+                    }
+                });
+            } else {
+                setActiveTabs();
+                if (typeof updateLegend === 'function') {
+                    updateLegend();
+                }
+            }
+        })();
+
+        // Global function for updating specialty options
+        function updateSpecialtyOptions(location) {
+            const specialtySelect = document.getElementById('specialtySelect');
+            if (!specialtySelect) return;
+
+            // Specialties only available in Hamburg
+            const hamburgOnlySpecialties = [
+                'fachaerztlicheKindermedizin',
+                'laborMedizin',
+                'pathologie',
+                'sonderfaecher',
+                'strahlentherapieNuklearmedizin'
+            ];
+
+            const options = specialtySelect.querySelectorAll('option');
+            const currentValue = specialtySelect.value;
+            
+            options.forEach(option => {
+                const isHamburgOnly = hamburgOnlySpecialties.includes(option.value);
+                
+                if (location === 'l' && isHamburgOnly) {
+                    option.disabled = true;
+                    option.textContent = option.textContent.split(' (')[0] + ' (nur Hamburg)';
+                } else {
+                    option.disabled = false;
+                    // Remove " (nur Hamburg)" suffix if it exists
+                    option.textContent = option.textContent.replace(' (nur Hamburg)', '');
+                }
+            });
+
+            // If current selection is Hamburg-only and we switched to Lüchow, reset to default
+            if (location === 'l' && hamburgOnlySpecialties.includes(currentValue)) {
+                specialtySelect.value = 'hausaerzteErwachsene';
+                
+                // Update URL
+                const url = new URL(window.location.href);
+                url.searchParams.set('specialty', 'hausaerzteErwachsene');
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+
+        // JavaScript for tab bar interactions
+        document.addEventListener('DOMContentLoaded', function () {
+            // Handle drawer toggle for mobile
+            const drawerHandle = document.getElementById('drawer-handle');
+            const paramForm = document.getElementById('param-form');
+            const legendContainer = document.getElementById('legend-container');
+            
+            function updateLegendPosition() {
+                if (legendContainer) {
+                    if (window.innerWidth <= 768 && paramForm) {
+                        if (paramForm.classList.contains('drawer-open')) {
+                            // Get the actual height of the drawer
+                            const drawerHeight = paramForm.offsetHeight;
+                            // Position legend 8px above the drawer top
+                            legendContainer.style.bottom = (drawerHeight + 8) + 'px';
+                        } else {
+                            // Position legend 8px above the collapsed drawer (48px handle + 8px gap)
+                            legendContainer.style.bottom = '56px';
+                        }
+                    } else {
+                        // Reset inline styles for desktop - let CSS take over
+                        legendContainer.style.bottom = '';
+                    }
+                }
+            }
+            
+            if (drawerHandle && paramForm) {
+                drawerHandle.addEventListener('click', function () {
+                    paramForm.classList.toggle('drawer-open');
+                    // Update legend position after animation starts
+                    setTimeout(updateLegendPosition, 10);
+                });
+
+                // Close drawer when clicking outside on mobile
+                document.addEventListener('click', function(event) {
+                    if (window.innerWidth <= 768) {
+                        if (!paramForm.contains(event.target) && paramForm.classList.contains('drawer-open')) {
+                            paramForm.classList.remove('drawer-open');
+                            setTimeout(updateLegendPosition, 10);
+                        }
+                    }
+                });
+
+                // Prevent closing when clicking inside the form
+                paramForm.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                });
+
+                // Update legend position on window resize
+                window.addEventListener('resize', updateLegendPosition);
+                
+                // Initial position
+                updateLegendPosition();
+            }
+
+            (function initSectionInfoTips() {
+                var tapToggle = window.matchMedia('(hover: none)').matches;
+
+                function closeAllSectionTips() {
+                    document.querySelectorAll('#param-form .section-info.is-open').forEach(function (wrap) {
+                        wrap.classList.remove('is-open');
+                        var b = wrap.querySelector('.section-info-btn');
+                        if (b) b.setAttribute('aria-expanded', 'false');
+                    });
+                }
+
+                document.querySelectorAll('#param-form .section-info').forEach(function (info) {
+                    var btn = info.querySelector('.section-info-btn');
+                    if (!btn) return;
+                    btn.addEventListener('click', function (e) {
+                        if (!tapToggle) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var willOpen = !info.classList.contains('is-open');
+                        closeAllSectionTips();
+                        if (willOpen) {
+                            info.classList.add('is-open');
+                            btn.setAttribute('aria-expanded', 'true');
+                        }
+                    });
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!tapToggle) return;
+                    if (!e.target.closest('#param-form .section-info') &&
+                        !e.target.closest('#param-form .section-info-tip')) {
+                        closeAllSectionTips();
+                    }
+                }, true);
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape') closeAllSectionTips();
+                });
+            })();
+
+            // Handle specialty select
+            const specialtySelect = document.getElementById('specialtySelect');
+            if (specialtySelect) {
+                specialtySelect.addEventListener('change', function () {
+                    // Update URL without reload
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('specialty', this.value);
+                    window.history.replaceState({}, '', url.toString());
+
+                    // Update map data
+                    updateMapData();
+                });
+            }
+
+            // Handle weighted switch
+            const weightedSwitch = document.getElementById('weightedSwitch');
+            if (weightedSwitch) {
+                weightedSwitch.addEventListener('change', function () {
+                    updateWeightedCaption(this.checked);
+
+                    // Update URL without reload
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('weighted', this.checked.toString());
+                    window.history.replaceState({}, '', url.toString());
+
+                    // Update map data
+                    updateMapData();
+                });
+            }
+
+            // Handle tab button clicks
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function () {
+                    const group = this.closest('.tab-bar').dataset.group;
+                    const value = this.dataset.value;
+
+                    // Remove active class from all buttons in the same group
+                    this.closest('.tab-bar').querySelectorAll('.tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    // Add active class to clicked button
+                    this.classList.add('active');
+
+                    // Handle constraints and force-switches
+                    if (group === 'prognosis') {
+                        if (value === 'progNom10' || value === 'progNom20') {
+                            // Prognosis active: force values to "Average"
+                            forceValuesToAverage();
+                        }
+                    } else if (group === 'values') {
+                        if (value === 'nowMinMax') {
+                            // Min/Max selected: force prognosis to "Off"
+                            forcePrognosisOff();
+                        }
+                    }
+
+                    // Update URL without reload
+                    const url = new URL(window.location.href);
+
+                    if (group === 'data') {
+                        // Direct mapping for data
+                        url.searchParams.set('data', value);
+                        window.history.replaceState({}, '', url.toString());
+
+                        // Update specialty dropdown based on location
+                        updateSpecialtyOptions(value);
+
+                        // Animate camera to new location
+                        animateToLocation(value);
+                    } else if (group === 'transport') {
+                        url.searchParams.set('transport', value);
+                        window.history.replaceState({}, '', url.toString());
+                        updateMapData();
+                    } else if (group === 'values' || group === 'prognosis') {
+                        // Get final combined mode
+                        const mode = getCombinedMode();
+                        url.searchParams.set('mode', mode);
+                        window.history.replaceState({}, '', url.toString());
+
+                        // Update map data
+                        updateMapData();
+                    }
+                });
+            });
+
+            // Helper functions
+            function forceValuesToAverage() {
+                const averageTab = document.querySelector('.tab-bar[data-group="values"] .tab-button[data-value="nowNom"]');
+                if (averageTab) {
+                    document.querySelectorAll('.tab-bar[data-group="values"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    averageTab.classList.add('active');
+                }
+            }
+
+            function forcePrognosisOff() {
+                const offTab = document.querySelector('.tab-bar[data-group="prognosis"] .tab-button[data-value="off"]');
+                if (offTab) {
+                    document.querySelectorAll('.tab-bar[data-group="prognosis"] .tab-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    offTab.classList.add('active');
+                }
+            }
+
+            function getCombinedMode() {
+                const currentValues = getCurrentValues();
+                const currentPrognosis = getCurrentPrognosis();
+
+                // Apply constraints
+                if (currentPrognosis === 'progNom10' || currentPrognosis === 'progNom20') {
+                    return currentPrognosis; // Prognosis overrides values
+                } else if (currentValues === 'nowMinMax') {
+                    return 'nowMinMax'; // Min/Max forces prognosis off
+                } else {
+                    return currentValues; // Default to values
+                }
+            }
+
+            function getCurrentValues() {
+                const activeValuesTab = document.querySelector('.tab-bar[data-group="values"] .tab-button.active');
+                return activeValuesTab ? activeValuesTab.dataset.value : 'nowNom';
+            }
+
+            function getCurrentPrognosis() {
+                const activePrognosisTab = document.querySelector('.tab-bar[data-group="prognosis"] .tab-button.active');
+                return activePrognosisTab ? activePrognosisTab.dataset.value : 'off';
+            }
+
+            // Function to animate camera to new location
+            function animateToLocation(dataValue) {
+                const center = dataValue === 'h' ? [10, 53.54] : [11.15, 53.05];
+                map.flyTo({
+                    center: center,
+                    zoom: 10,
+                    duration: 1500,
+                    essential: true
+                });
+
+                // Update map data after camera animation
+                setTimeout(() => {
+                    updateMapData();
+                }, 1600);
+            }
+
+            // Function to update map data without reload
+            function updateMapData() {
+                // Get current parameters
+                const currentData = getCurrentData();
+                const currentMode = getCombinedMode();
+                const currentWeighted = document.getElementById('weightedSwitch').checked;
+                const currentSpecialty = getCurrentSpecialty();
+                const currentTransport = getCurrentTransport();
+
+                // Update global variables
+                window.dataParam = currentData;
+                window.mode = currentMode;
+                window.weighted = currentWeighted;
+                window.specialty = currentSpecialty;
+                window.transport = currentTransport;
+                window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
+
+                // Update legend
+                updateLegend();
+
+                const dataPath = getDataPath(currentData, currentSpecialty, currentTransport);
+
+                // Load and process new data
+                fetch(dataPath)
+                    .then(res => res.json())
+                    .then(geojson => {
+                        processAndUpdateMapData(geojson);
+                    })
+                    .catch(error => {
+                        console.error('Error loading data:', error);
+                    });
+            }
+
+            function getCurrentData() {
+                const activeDataTab = document.querySelector('.tab-bar[data-group="data"] .tab-button.active');
+                return activeDataTab ? activeDataTab.dataset.value : 'h';
+            }
+
+            function getCurrentSpecialty() {
+                const specialtySelect = document.getElementById('specialtySelect');
+                return specialtySelect ? specialtySelect.value : 'hausaerzteErwachsene';
+            }
+
+            function getCurrentTransport() {
+                const activeTransportTab = document.querySelector('.tab-bar[data-group="transport"] .tab-button.active');
+                return activeTransportTab ? activeTransportTab.dataset.value : 'transit';
+            }
+
+        });
+    </script>
+
+    <div id="map"></div>
+
+    <script src="tokens.js?version=1"></script>
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script>
+        const searchParams = new URLSearchParams(window.location.search);
+
+        // SEARCH PARAMS
+        window.mode = (searchParams.get('mode') || 'nowNom');
+        // console.log("mode: ", window.mode);
+        window.dataParam = (searchParams.get('data') || 'h');
+        window.weighted = (searchParams.get('weighted') === 'true');
+        window.specialty = (searchParams.get('specialty') || 'hausaerzteErwachsene');
+        window.transport = (searchParams.get('transport') || 'transit');
+
+        window.prognosis = window.mode == 'progNom10' || window.mode == 'progNom20';
+
+        function getDataPath(dataParam, specialty, transport) {
+            const region = dataParam === 'h' ? '20260511-hamburg' : '20260511-luechow';
+            const mode = transport === 'transit' ? 'transit' : 'car';
+            return `data/${region}/${mode}_${specialty}.geojson`;
+        }
+
+        // Global function for updating weighted caption
+        function updateWeightedCaption(isWeighted) {
+            const caption = document.getElementById('weightedCaption');
+            if (caption) {
+                caption.textContent = isWeighted ? 'Zeit gewichtet nach Bevölkerung' : 'Zeit in Minuten';
+            }
+        }
+
+        // Global function for updating legend
+        function updateLegend() {
+            const legendContent = document.getElementById('legend-content');
+            if (!legendContent) return;
+
+            const prettyBreaks = /*window.dataParam == 'h' ? [2, 4, 6] :*/ [5, 10, 15];
+            const colorMin = [50, 165, 202]; // Blue
+            const colorMax = [218, 85, 80];  // Red
+            
+            if (window.prognosis) {
+                // Prognosis mode: 3 blue + 1 white + 3 red = 7 segments
+                const numSegments = 7;
+                let segments = '';
+                let labels = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    let color;
+                    if (i < 3) {
+                        // Blue segments (0, 1, 2): go from dark blue to 2/3 of the way to white
+                        const t = i / 3; // 0, 0.33, 0.67
+                        const r = Math.round((1 - t) * colorMin[0] + t * 255);
+                        const g = Math.round((1 - t) * colorMin[1] + t * 255);
+                        const b = Math.round((1 - t) * colorMin[2] + t * 255);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                    } else if (i === 3) {
+                        // White segment in the middle
+                        color = 'rgb(255, 255, 255)';
+                    } else {
+                        // Red segments (4, 5, 6): start 1/3 of the way from white, go to dark red
+                        const t = (i - 3) / 3; // 0.33, 0.67, 1.0
+                        const r = Math.round((1 - t) * 255 + t * colorMax[0]);
+                        const g = Math.round((1 - t) * 255 + t * colorMax[1]);
+                        const b = Math.round((1 - t) * 255 + t * colorMax[2]);
+                        color = `rgb(${r}, ${g}, ${b})`;
+                    }
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels: besser (left), gleich (center), schlechter (right)
+                labels = `
+                    <div class="legend-label left-aligned" style="left: 0;">besser</div>
+                    <div class="legend-label" style="left: 50%;">gleich</div>
+                    <div class="legend-label right-aligned" style="left: 100%;">schlechter</div>
+                `;
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
+            } else if (window.weighted) {
+                // Weighted non-prognosis: discrete segments from blue to red
+                const numSegments = 4;
+                let segments = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    const t = i / (numSegments - 1);
+                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                    const color = `rgb(${r}, ${g}, ${b})`;
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels: niedrig (left), hoch (right)
+                const labels = `
+                    <div class="legend-label left-aligned" style="left: 0;">niedrig</div>
+                    <div class="legend-label right-aligned" style="left: 100%;">hoch</div>
+                `;
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
+            } else {
+                // Unweighted: discrete segments with break labels
+                const numSegments = prettyBreaks.length + 1;
+                let segments = '';
+                let labels = '';
+                
+                for (let i = 0; i < numSegments; i++) {
+                    const t = i / prettyBreaks.length;
+                    const r = Math.round((1 - t) * colorMin[0] + t * colorMax[0]);
+                    const g = Math.round((1 - t) * colorMin[1] + t * colorMax[1]);
+                    const b = Math.round((1 - t) * colorMin[2] + t * colorMax[2]);
+                    const color = `rgb(${r}, ${g}, ${b})`;
+                    segments += `<div class="legend-segment" style="background: ${color};"></div>`;
+                }
+                
+                // Labels at breaks between segments
+                for (let i = 0; i < prettyBreaks.length; i++) {
+                    const position = ((i + 1) / numSegments) * 100;
+                    labels += `<div class="legend-label" style="left: ${position}%;">${prettyBreaks[i]} min</div>`;
+                }
+                
+                legendContent.innerHTML = `
+                    <div class="legend-bar">${segments}</div>
+                    <div class="legend-labels">${labels}</div>
+                `;
+            }
+        }
+
+        const dataPath = getDataPath(window.dataParam, window.specialty, window.transport);
+
+        const binCount = parseInt(searchParams.get('bins')) || 4;
+
+        // SEARCH PARAMS
+
+        const prettyBreaks = /*window.dataParam == 'h' ? [2, 4, 6] :*/ [5, 10, 15];
+
+        const verticesCountNow = 12;
+        const verticesCountPrognosis = 4;
+        const center = window.dataParam === 'h' ? [10, 53.54] : [11.15, 53.05];
+        const radiusInMeters = 50;
+        const earthRadius = 6371000;
+
+        // let extrusionFactor = 1;
+        // if (mode === 'nowNom' || mode === 'nowMinMax')
+        const extrusionFactor = window.weighted ? 8000 : 3200;
+
+        const latRadiusInDegrees = radiusInMeters / earthRadius * (180 / Math.PI);
+        const lonRadiusInDegrees = radiusInMeters / (earthRadius * Math.cos(center[1] * Math.PI / 180)) * (180 / Math.PI);
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://api.maptiler.com/maps/basic-v2-dark/style.json?key=' + MAPTILER_KEY,
+            center: center,
+            zoom: 10,
+            pitch: 60,
+            bearing: 0
+        });
+
+        const MapState = { in2D: 1, in3D: 2, animating: 4 };
+        let mapState = MapState.in3D;
+
+        let nav = new maplibregl.NavigationControl();
+        map.addControl(nav, 'top-right');
+
+        const INACCESSIBLE_COLOR = 'rgb(100, 100, 100)';
+
+        function isInaccessible(prop) {
+            if (window.transport !== 'transit') return false;
+            // According to Null_entries_classified.txt, this is sufficient to classify as inaccessible
+            return prop.uNom80 == null || prop.uMax100 == null;
+        }
+
+        // Function to process data and update map (extracted from original map.on('load'))
+        function processAndUpdateMapData(geojson, init = false) {
+            let allVals = [];
+            geojson.features.forEach(f => {
+                if (isInaccessible(f.properties)) return;
+                const t = properties(f.properties, window.mode, window.weighted);
+                if (Array.isArray(t)) {
+                    t.forEach(val => {
+                        if (typeof val === 'number' && !isNaN(val)) allVals.push(val);
+                    });
+                } else if (typeof t === 'number' && !isNaN(t)) {
+                    allVals.push(t);
+                }
+            });
+
+            allVals.sort((a, b) => a - b);
+            // console.log('Max value:', allVals[allVals.length - 1]);
+            // console.log('Min value:', allVals[0]);
+
+            const quantiles = (arr, bins = binCount) => {
+                const result = [];
+                for (let i = 1; i < bins; i++) {
+                    result.push(arr[Math.floor(arr.length * i / bins)]);
+                }
+                return result;
+            };
+
+            let combinedQuantiles, positiveQuantiles, negativeQuantiles;
+            
+            if (window.prognosis) {
+                // Separate positive and negative values for prognosis mode
+                const positiveVals = allVals.filter(v => v > 0).sort((a, b) => a - b);
+                const negativeVals = allVals.filter(v => v < 0).sort((a, b) => a - b);
+                const zeroVals = allVals.filter(v => v === 0);
+                
+                // Determine which range has higher max absolute value
+                const maxPositive = positiveVals.length > 0 ? positiveVals[positiveVals.length - 1] : 0;
+                const maxNegative = negativeVals.length > 0 ? Math.abs(negativeVals[0]) : 0;
+                
+                // Calculate 9 quantiles (8 breaks) and use only 1st, 3rd, 5th, 7th (indices 0, 2, 4, 6)
+                // Use the range with higher max abs value for both directions (symmetric mapping)
+                if (maxPositive >= maxNegative && positiveVals.length > 0) {
+                    // Use positive quantiles for both directions
+                    const allPositiveQuantiles = quantiles(positiveVals, 9);
+                    positiveQuantiles = allPositiveQuantiles.length >= 7 ? 
+                        [allPositiveQuantiles[0], allPositiveQuantiles[2], allPositiveQuantiles[4], allPositiveQuantiles[6]] : 
+                        allPositiveQuantiles;
+                    // Apply same thresholds with reversed signs for negative range
+                    negativeQuantiles = positiveQuantiles.map(q => -q).reverse();
+                } else if (negativeVals.length > 0) {
+                    // Use negative quantiles for both directions
+                    const allNegativeQuantiles = quantiles(negativeVals, 9);
+                    negativeQuantiles = allNegativeQuantiles.length >= 7 ? 
+                        [allNegativeQuantiles[0], allNegativeQuantiles[2], allNegativeQuantiles[4], allNegativeQuantiles[6]] : 
+                        allNegativeQuantiles;
+                    // Apply same thresholds with reversed signs for positive range
+                    positiveQuantiles = negativeQuantiles.map(q => -q).reverse();
+                }
+                
+                // console.log('Positive values count:', positiveVals.length, 'range:', positiveVals[0], 'to', positiveVals[positiveVals.length - 1]);
+                // console.log('Negative values count:', negativeVals.length, 'range:', negativeVals[0], 'to', negativeVals[negativeVals.length - 1]);
+                // console.log('Zero values count:', zeroVals.length);
+                // console.log('Max absolute values - Positive:', maxPositive, 'Negative:', maxNegative);
+                // console.log('Using', maxPositive >= maxNegative ? 'positive' : 'negative', 'range for symmetric thresholds');
+                // console.log('Positive quantiles (increases):', positiveQuantiles);
+                // console.log('Negative quantiles (decreases):', negativeQuantiles);
+            } else {
+                combinedQuantiles = window.weighted ? quantiles(allVals) : prettyBreaks;
+                // console.log('Quantiles:', combinedQuantiles);
+            }
+
+            // For prognosis mode, use maximum absolute value for proper scaling
+            const maxAbsValue = allVals.length > 0 ?
+                (window.prognosis ?
+                    Math.max(Math.abs(allVals[0]), Math.abs(allVals[allVals.length - 1])) :
+                    allVals[allVals.length - 1]) :
+                1;
+            const ef = extrusionFactor / maxAbsValue;
+            console.log('maxAbsValue: ', maxAbsValue);
+            console.log('ef: ', ef);
+
+            const extrusions = [];
+            geojson.features.forEach((f, i) => {
+                const center = f.geometry.coordinates;
+                const t = properties(f.properties, window.mode, window.weighted);
+                const inaccessible = isInaccessible(f.properties);
+
+                // Always add the outer ring (base)
+                extrusions.push({
+                    type: 'Feature',
+                    id: i * 2,
+                    geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 1)] },
+                    properties: {
+                        color: inaccessible ? INACCESSIBLE_COLOR :
+                            interpolateColor(t[0], combinedQuantiles, positiveQuantiles, negativeQuantiles),
+                        baseHeight: 0,
+                        targetHeight: inaccessible ? 0 : Math.abs(t[0]) * ef
+                    }
+                });
+
+                // Add inner ring for all modes, but with zero height except for nowMinMax (always visible in 2D, extruded in 3D)
+                const innerValue = window.mode === 'nowMinMax' ? t[1] : t[0];
+                const innerInaccessible = inaccessible ||
+                    innerValue == null || typeof innerValue !== 'number' || isNaN(innerValue);
+                extrusions.push({
+                    type: 'Feature',
+                    id: i * 2 + 1,
+                    geometry: { type: 'Polygon', coordinates: [makeHexPolygon(center, 0.5)] },
+                    properties: {
+                        color: innerInaccessible ? INACCESSIBLE_COLOR :
+                            interpolateColor(innerValue, combinedQuantiles, positiveQuantiles, negativeQuantiles),
+                        baseHeight: 0,
+                        targetHeight: (window.mode === 'nowMinMax' && !innerInaccessible) ? Math.abs(innerValue) * ef : 0
+                    }
+                });
+            });
+
+            if (init) {
+                // Add map source and layer
+                map.addSource('cells', {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: extrusions }
+                });
+
+                // Find the first label layer to insert our layer before it
+                // This ensures labels appear on top of 3D extrusions
+                const layers = map.getStyle().layers;
+                let firstLabelLayerId;
+                for (const layer of layers) {
+                    if (layer.type === 'symbol' && layer.layout && layer.layout['text-field']) {
+                        firstLabelLayerId = layer.id;
+                        break;
+                    }
+                }
+
+                map.addLayer({
+                    id: 'extruded-layer',
+                    type: 'fill-extrusion',
+                    source: 'cells',
+                    paint: {
+                        'fill-extrusion-color': ['get', 'color'],
+                        'fill-extrusion-opacity': 1,
+                        'fill-extrusion-height': ['coalesce', ['feature-state', 'height'], 0],
+                        'fill-extrusion-base': ['coalesce', ['get', 'baseHeight'], 0]
+                    }
+                }, firstLabelLayerId);
+            }
+            else {
+                // Store current heights before updating data
+                const currentHeights = new Map();
+                if (map.getSource('cells')) {
+                    const source = map.getSource('cells');
+                    const features = source._data.features;
+                    features.forEach(f => {
+                        const state = map.getFeatureState({ source: 'cells', id: f.id });
+                        currentHeights.set(f.id, state.height || 0);
+                    });
+                }
+
+                // Update map source
+                map.getSource('cells').setData({ type: 'FeatureCollection', features: extrusions });
+
+                // Check if we're switching between compatible modes
+                const isCompatibleModeSwitch = window.lastMode && (
+                    (window.lastMode === 'progNom10' && window.mode === 'progNom20') ||
+                    (window.lastMode === 'progNom20' && window.mode === 'progNom10') ||
+                    (window.lastMode === 'nowNom' && window.mode === 'nowMinMax') ||
+                    (window.lastMode === 'nowMinMax' && window.mode === 'nowNom')
+                );
+
+                if (isCompatibleModeSwitch) {
+                    // Preserve heights for compatible mode switches
+                    extrusions.forEach(f => {
+                        const preservedHeight = currentHeights.get(f.id) || 0;
+                        map.setFeatureState({ source: 'cells', id: f.id }, { height: preservedHeight });
+                    });
+                } else {
+                    // Reset feature states for other changes
+                    extrusions.forEach(f =>
+                        map.setFeatureState({ source: 'cells', id: f.id }, { height: 0 })
+                    );
+                }
+            }
+
+            // Store current mode for next comparison
+            window.lastMode = window.mode;
+
+            // Animate extrusions to target heights if in 3D mode
+            if (mapState === MapState.in3D) {
+                setTimeout(() => {
+                    animateExtrusion(true, 300);
+                }, 100);
+            }
+        }
+
+        const interpolateColor = (value, thresholds, positiveThresholds, negativeThresholds) => {
+            let colorMin, colorMax;
+            let useThresholds = thresholds;
+            
+            if (window.prognosis) {
+                // Zero values should always be white (no change)
+                if (value === 0) {
+                    return 'rgb(255, 255, 255)';
+                }
+                
+                if (value > 0) {
+                    colorMin = [255, 255, 255];
+                    colorMax = [218, 85, 80];
+                    // Use separate positive quantiles if available
+                    if (positiveThresholds && positiveThresholds.length > 0) {
+                        useThresholds = positiveThresholds;
+                        
+                        // Handle values below the minimum threshold (first segment)
+                        if (value <= useThresholds[0]) {
+                            // Interpolate from 0 to threshold[0]
+                            const segmentT = value / useThresholds[0];
+                            const overallT = segmentT / useThresholds.length;
+                            const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                            const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                            const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                            return `rgb(${r}, ${g}, ${b})`;
+                        }
+                        
+                        // Interpolate between thresholds
+                        for (let i = 0; i < useThresholds.length - 1; i++) {
+                            if (value <= useThresholds[i + 1]) {
+                                // Value is between useThresholds[i] and useThresholds[i+1]
+                                const segmentT = (value - useThresholds[i]) / (useThresholds[i + 1] - useThresholds[i]);
+                                const overallT = (i + 1 + segmentT) / useThresholds.length;
+                                const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                                const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                                const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                                return `rgb(${r}, ${g}, ${b})`;
+                            }
+                        }
+                        // Value is above the highest threshold
+                        return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
+                    }
+                }
+                else {
+                    colorMin = [255, 255, 255];
+                    colorMax = [50, 165, 202];
+                    // Use separate negative quantiles if available, and work with absolute values
+                    if (negativeThresholds && negativeThresholds.length > 0) {
+                        useThresholds = negativeThresholds.map(v => Math.abs(v));
+                        const absValue = Math.abs(value);
+                        
+                        // Handle values below the minimum threshold (first segment)
+                        if (absValue <= useThresholds[0]) {
+                            // Interpolate from 0 to threshold[0]
+                            const segmentT = absValue / useThresholds[0];
+                            const overallT = segmentT / useThresholds.length;
+                            const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                            const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                            const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                            return `rgb(${r}, ${g}, ${b})`;
+                        }
+                        
+                        // Interpolate between thresholds
+                        for (let i = 0; i < useThresholds.length - 1; i++) {
+                            if (absValue <= useThresholds[i + 1]) {
+                                // Value is between useThresholds[i] and useThresholds[i+1]
+                                const segmentT = (absValue - useThresholds[i]) / (useThresholds[i + 1] - useThresholds[i]);
+                                const overallT = (i + 1 + segmentT) / useThresholds.length;
+                                const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                                const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                                const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                                return `rgb(${r}, ${g}, ${b})`;
+                            }
+                        }
+                        // Value is above the highest threshold
+                        return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
+                    }
+                }
+            }
+            else {
+                colorMin = [50, 165, 202];
+                colorMax = [218, 85, 80];
+            }
+
+            // Standard threshold-based interpolation
+            // For non-prognosis: we have numSegments = useThresholds.length + 1 color segments
+            // Segment 0: 0 to threshold[0]
+            // Segment 1: threshold[0] to threshold[1]
+            // ...
+            // Last segment: threshold[n-1] to infinity
+            
+            const numSegments = useThresholds.length + 1;
+            
+            // Handle values below the minimum threshold (first segment)
+            if (value <= useThresholds[0]) {
+                // Linear interpolation from 0 to threshold[0]
+                const segmentT = value / useThresholds[0];
+                const overallT = segmentT / numSegments;
+                const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+            
+            // Interpolate between thresholds
+            for (let i = 0; i < useThresholds.length - 1; i++) {
+                if (value <= useThresholds[i + 1]) {
+                    // Value is between useThresholds[i] and useThresholds[i+1]
+                    const segmentT = (value - useThresholds[i]) / (useThresholds[i + 1] - useThresholds[i]);
+                    const overallT = (i + 1 + segmentT) / numSegments;
+                    const r = Math.round((1 - overallT) * colorMin[0] + overallT * colorMax[0]);
+                    const g = Math.round((1 - overallT) * colorMin[1] + overallT * colorMax[1]);
+                    const b = Math.round((1 - overallT) * colorMin[2] + overallT * colorMax[2]);
+                    return `rgb(${r}, ${g}, ${b})`;
+                }
+            }
+            // Value is above the highest threshold (last segment)
+            return `rgb(${colorMax[0]}, ${colorMax[1]}, ${colorMax[2]})`;
+        };
+
+        const makeHexPolygon = ([centerLon, centerLat], scale = 1) => {
+            const points = [];
+            const verticesCount = window.prognosis ? verticesCountPrognosis : verticesCountNow;
+            for (let i = 0.5; i < verticesCount; i++) {
+                const angle = (i / verticesCount) * 2 * Math.PI;
+                const dLat = latRadiusInDegrees * scale * Math.sin(angle);
+                const dLon = lonRadiusInDegrees * scale * Math.cos(angle);
+                points.push([centerLon + dLon, centerLat + dLat]);
+            }
+            points.push(points[0]);
+            return points;
+        };
+
+        const properties = (prop, mode, weighted = false) => {
+            switch (mode) {
+                case 'nowNom':
+                    return weighted ?
+                        [prop.wNom100, prop.wMax100] :
+                        [prop.uNom100, prop.uMax100];
+                case 'nowMinMax':
+                    return weighted ?
+                        [prop.wMin100, prop.wMax100] :
+                        [prop.uMin100, prop.uMax100];
+                case 'progNom10':
+                    return weighted ?
+                        [prop.wNom90 - prop.wNom100] :
+                        [prop.uNom90 - prop.uNom100];
+                case 'progNom20':
+                    return weighted ?
+                        [prop.wNom80 - prop.wNom100] :
+                        [prop.uNom80 - prop.uNom100];
+                default:
+                    return [];
+            }
+        };
+
+        map.on('load', () => {
+            map.setLight({
+                anchor: 'viewport',
+                color: '#ffffff',
+                intensity: 0.5
+            });
+
+            fetch(dataPath)
+                .then(res => res.json())
+                .then(geojson => processAndUpdateMapData(geojson, true));
+        });
+
+        map.on('pitchend', () => {
+            const pitch = map.getPitch();
+            if (mapState !== MapState.animating) {
+                if (pitch === 0 && mapState !== MapState.in2D) animateExtrusion(false);
+                else if (pitch > 0 && mapState !== MapState.in3D) animateExtrusion(true);
+            }
+        });
+
+        function animateExtrusion(to3D = false, duration = 500) {
+            const source = map.getSource('cells');
+            const features = source._data.features;
+            const start = performance.now();
+
+            // Store current heights at the start of animation
+            const startHeights = new Map();
+            features.forEach(f => {
+                const state = map.getFeatureState({ source: 'cells', id: f.id });
+                startHeights.set(f.id, state.height || 0);
+            });
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+
+                for (const f of features) {
+                    const startHeight = startHeights.get(f.id) || 0;
+                    const targetHeight = to3D ? f.properties.targetHeight : 0;
+                    const newHeight = startHeight + (targetHeight - startHeight) * eased;
+                    map.setFeatureState({ source: 'cells', id: f.id }, { height: newHeight });
+                }
+
+                if (t < 1) requestAnimationFrame(frame);
+                else {
+                    mapState = to3D ? MapState.in3D : MapState.in2D;
+                    setButtonText(to3D ? '2D' : '3D');
+                }
+            }
+
+            requestAnimationFrame(frame);
+        }
+
+        function animateMapPitch(to3D = false, duration = 1500) {
+            const start = performance.now();
+            const pitchStart = map.getPitch();
+            const pitchEnd = to3D ? 60 : 0;
+
+            function frame(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = t * t * (3 - 2 * t);
+                map.setPitch(pitchStart + (pitchEnd - pitchStart) * eased);
+
+                if (t < 1) requestAnimationFrame(frame);
+                else animateExtrusion(to3D);
+            }
+
+            mapState = MapState.animating;
+            requestAnimationFrame(frame);
+        }
+
+        function pitchButtonPressed() {
+            setButtonText('…');
+            animateMapPitch(map.getPitch() === 0);
+        }
+
+        function setButtonText(text = '3D') {
+            document.querySelector('#pitchButton').innerHTML = text;
+        }
+    </script>
+</body>
+
+</html>

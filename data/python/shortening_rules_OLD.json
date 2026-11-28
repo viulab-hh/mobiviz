@@ -1,0 +1,18 @@
+{
+	"property_renaming": {
+		"tNom_100pctDocs": "uNom100",
+		"tNom_090pctDocs": "uNom90",
+		"tNom_080pctDocs": "uNom80",
+		"tMin_100pctDocs": "uMin100",
+		"tMax_100pctDocs": "uMax100",
+		"EwM_22_Nom_100pctDocs": "wNom100",
+		"EwM_22_Min_100pctDocs": "wMin100",
+		"EwM_22_Max_100pctDocs": "wMax100",
+		"EwM_40_Nom_090pctDocs": "wNom90",
+		"EwM_40_Nom_080pctDocs": "wNom80"
+	},
+	"rounding": {
+		"property_values": 1,
+		"coordinate_values": 6
+	}
+}

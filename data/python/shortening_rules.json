@@ -1,0 +1,28 @@
+{
+	"property_renaming": {
+		"car_tNom_100pctDocs": "a",
+		"car_tMin_100pctDocs": "b",
+		"car_tMax_100pctDocs": "c",
+		"car_tNom_090pctDocs": "d",
+		"car_tNom_080pctDocs": "e",
+		"car_EwM_22_Nom_100pctDocs": "f",
+		"car_EwM_22_Min_100pctDocs": "g",
+		"car_EwM_22_Max_100pctDocs": "h",
+		"car_EwM_40_Nom_090pctDocs": "i",
+		"car_EwM_40_Nom_080pctDocs": "j",
+		"transit_tNom_100pctDocs": "k",
+		"transit_tMin_100pctDocs": "l",
+		"transit_tMax_100pctDocs": "m",
+		"transit_tNom_090pctDocs": "n",
+		"transit_tNom_080pctDocs": "o",
+		"transit_EwM_22_Nom_100pctDocs": "p",
+		"transit_EwM_22_Min_100pctDocs": "q",
+		"transit_EwM_22_Max_100pctDocs": "r",
+		"transit_EwM_40_Nom_090pctDocs": "s",
+		"transit_EwM_40_Nom_080pctDocs": "t"
+	},
+	"rounding": {
+		"property_values": 1,
+		"coordinate_values": 6
+	}
+}
